@@ -1,127 +1,152 @@
+"use client";
+
 import React from "react";
-import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from "@grupo-j/ui-web";
+import Link from "next/link";
+import {
+  PageHeader,
+  KpiCard,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  Badge,
+  Button,
+  Users,
+  Wrench,
+  DollarSign,
+  ShieldCheck,
+  Download,
+  Plus
+} from "@grupo-j/ui-web";
 
-export default function DashboardPage() {
+export default function AdminDashboardPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Visão Geral da Plataforma
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Métricas consolidadas de assinaturas, oficinas credenciadas e resgates preventivos.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm">
-            Exportar Relatório
-          </Button>
-          <Button variant="primary" size="sm">
-            + Nova Oficina
-          </Button>
-        </div>
+    <div className="space-y-6 text-left">
+      <PageHeader
+        title="Visão Geral da Plataforma"
+        subtitle="Métricas consolidadas de assinaturas ativas, centros automotivos credenciados e receita recorrente."
+        actions={
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" leftIcon={<Download size={14} />}>
+              Exportar Relatório
+            </Button>
+            <Link href="/oficinas">
+              <Button variant="primary" size="sm" leftIcon={<Plus size={14} />}>
+                Nova Oficina
+              </Button>
+            </Link>
+          </div>
+        }
+      />
+
+      {/* Grade de KPIs Executivos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <KpiCard
+          title="MRR Consolidado"
+          value="R$ 89.400,00"
+          subtitle="Receita recorrente mensal auditada"
+          icon={<DollarSign size={20} />}
+          badge={{ text: "+14% vs. mês ant.", variant: "success" }}
+        />
+
+        <KpiCard
+          title="Motoristas Ativos"
+          value="1.428"
+          subtitle="R$ 50,00/mês por assinante"
+          icon={<Users size={20} />}
+          badge={{ text: "R$ 71.400/mês", variant: "info" }}
+        />
+
+        <KpiCard
+          title="Oficinas Credenciadas"
+          value="36"
+          subtitle="R$ 500,00/mês por oficina parceira"
+          icon={<Wrench size={20} />}
+          badge={{ text: "R$ 18.000/mês", variant: "info" }}
+        />
+
+        <KpiCard
+          title="Resgates no Mês"
+          value="412"
+          subtitle="Manutenções preventivas realizadas"
+          icon={<ShieldCheck size={20} />}
+          badge={{ text: "Sinistralidade 28%", variant: "neutral" }}
+        />
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card variant="elevated">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">
-                Motoristas Ativos
-              </span>
-              <Badge variant="success">+12% este mês</Badge>
-            </div>
-            <p className="text-2xl font-bold text-slate-900 mt-2">1.428</p>
-            <p className="text-xs text-slate-500 mt-1">R$ 50,00/mês por assinante</p>
-          </CardContent>
-        </Card>
-
-        <Card variant="elevated">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">
-                Oficinas Credenciadas
-              </span>
-              <Badge variant="info">Rede Ativa</Badge>
-            </div>
-            <p className="text-2xl font-bold text-slate-900 mt-2">36</p>
-            <p className="text-xs text-slate-500 mt-1">R$ 500,00/mês por oficina parceira</p>
-          </CardContent>
-        </Card>
-
-        <Card variant="elevated">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">
-                MRR Total
-              </span>
-              <Badge variant="success">Auditado</Badge>
-            </div>
-            <p className="text-2xl font-bold text-slate-900 mt-2">R$ 89.400,00</p>
-            <p className="text-xs text-slate-500 mt-1">Receita recorrente mensal consolidada</p>
-          </CardContent>
-        </Card>
-
-        <Card variant="elevated">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase text-slate-500 tracking-wider">
-                Resgates no Mês
-              </span>
-              <Badge variant="neutral">Prevenção</Badge>
-            </div>
-            <p className="text-2xl font-bold text-slate-900 mt-2">412</p>
-            <p className="text-xs text-slate-500 mt-1">Serviços executados na rede</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Seção Operacional */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Promoções Aguardando Moderação</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">
-                    Auto Center Barra — Desconto em Pastilhas de Freio
+      {/* Seções Operacionais Executivas */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Fila de Moderação de Promoções das Oficinas */}
+        <div className="lg:col-span-7">
+          <Card variant="elevated">
+            <CardHeader>
+              <div>
+                <CardTitle>Promoções Aguardando Moderação</CardTitle>
+                <CardDescription>
+                  Ofertas submetidas pelas oficinas parceiras antes de publicação no app dos motoristas.
+                </CardDescription>
+              </div>
+              <Badge variant="warning" size="sm">
+                1 Pendente
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">
+                      Auto Center Barra
+                    </span>
+                    <span className="text-xs text-slate-400">• Rio de Janeiro/RJ</span>
+                  </div>
+                  <p className="text-xs font-semibold text-[#034EFE]">
+                    20% de Desconto em Troca de Pastilhas Dianteiras
                   </p>
-                  <p className="text-xs text-slate-500">20% de desconto para assinantes ativos</p>
+                  <p className="text-[11px] text-slate-500">
+                    Vigência: 01/10/2026 a 31/10/2026 — Exclusivo para assinantes ativos
+                  </p>
                 </div>
-                <Button size="sm" variant="outline">
-                  Avaliar
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" size="xs">
+                    Recusar
+                  </Button>
+                  <Button variant="primary" size="xs">
+                    Aprovar Oferta
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Status da Infraestrutura</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm">
+        {/* Status da Infraestrutura e Segurança */}
+        <div className="lg:col-span-5">
+          <Card variant="elevated">
+            <CardHeader>
+              <CardTitle>Governança & Segurança</CardTitle>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs">
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">PostgreSQL com Row Level Security:</span>
-                <Badge variant="success">Operacional</Badge>
+                <span className="text-slate-600 font-medium">PostgreSQL Row Level Security:</span>
+                <Badge variant="success" size="sm">100% Ativo</Badge>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">Gateway de Pagamentos:</span>
-                <Badge variant="info">Ambiente Homologado</Badge>
+                <span className="text-slate-600 font-medium">Criptografia AES-256 + Blind Index:</span>
+                <Badge variant="success" size="sm">LGPD Conforme</Badge>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-slate-600 font-medium">Gateway Mercado Pago:</span>
+                <Badge variant="info" size="sm">Idempotência OK</Badge>
               </div>
               <div className="flex items-center justify-between py-2">
-                <span className="text-slate-600">Sessão Técnica Break-Glass:</span>
-                <Badge variant="neutral">Inativa (Segura)</Badge>
+                <span className="text-slate-600 font-medium">Sessão Break-Glass:</span>
+                <Badge variant="neutral" size="sm">Inativa (Protegida)</Badge>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

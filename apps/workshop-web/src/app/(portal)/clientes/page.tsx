@@ -1,43 +1,128 @@
-import React from "react";
-import { Card, CardContent, Badge } from "@grupo-j/ui-web";
+"use client";
+
+import React, { useState } from "react";
+import {
+  PageHeader,
+  FilterBar,
+  DataTable,
+  StatusBadge,
+  Button
+} from "@grupo-j/ui-web";
 import { mockCustomer, mockVehicle } from "@grupo-j/test-utils";
 
-export default function ClientesOficinaPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Clientes Vinculados à Oficina</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Motoristas ativos que escolheram este centro automotivo como referência (isolado via RLS).
-        </p>
-      </div>
+interface ClienteRow {
+  id: string;
+  name: string;
+  phone: string;
+  plate: string;
+  model: string;
+  memberSince: string;
+  status: string;
+}
 
-      <Card>
-        <CardContent className="p-0">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-4">Nome do Motorista</th>
-                <th className="px-6 py-4">Telefone</th>
-                <th className="px-6 py-4">Veículo</th>
-                <th className="px-6 py-4">Status da Assinatura</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              <tr className="hover:bg-slate-50/50">
-                <td className="px-6 py-4 font-medium text-slate-900">{mockCustomer.fullName}</td>
-                <td className="px-6 py-4">{mockCustomer.phone}</td>
-                <td className="px-6 py-4 font-semibold text-slate-800">
-                  {mockVehicle.plate} <span className="text-xs font-normal text-slate-500">({mockVehicle.brand} {mockVehicle.model})</span>
-                </td>
-                <td className="px-6 py-4">
-                  <Badge variant="success">Assinante Ativo</Badge>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+const mockClientes: ClienteRow[] = [
+  {
+    id: "1",
+    name: mockCustomer.fullName,
+    phone: mockCustomer.phone,
+    plate: mockVehicle.plate,
+    model: `${mockVehicle.brand} ${mockVehicle.model}`,
+    memberSince: "15/01/2026",
+    status: "Ativa"
+  },
+  {
+    id: "2",
+    name: "Mariana Costa",
+    phone: "(11) 98765-4321",
+    plate: "ABC-1234",
+    model: "Toyota Corolla GLi",
+    memberSince: "02/02/2026",
+    status: "Ativa"
+  },
+  {
+    id: "3",
+    name: "Fernando Ramos",
+    phone: "(21) 97123-8899",
+    plate: "RIO-9988",
+    model: "Chevrolet Onix Plus",
+    memberSince: "20/03/2026",
+    status: "Ativa"
+  }
+];
+
+export default function ClientesOficinaPage() {
+  const [search, setSearch] = useState("");
+
+  const filtered = mockClientes.filter(
+    (c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.plate.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 text-left">
+      <PageHeader
+        title="Clientes Vinculados à Oficina"
+        subtitle="Motoristas ativos que escolheram seu centro automotivo como referência (isolado via RLS)."
+      />
+
+      <FilterBar
+        searchPlaceholder="Buscar por nome ou placa do cliente..."
+        searchValue={search}
+        onSearchChange={setSearch}
+        onClearSearch={() => setSearch("")}
+      />
+
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <DataTable
+          columns={[
+            {
+              key: "name",
+              header: "Nome do Motorista",
+              render: (item) => (
+                <div>
+                  <span className="font-bold text-slate-900">{item.name}</span>
+                  <span className="block text-xs text-slate-400">{item.phone}</span>
+                </div>
+              )
+            },
+            {
+              key: "plate",
+              header: "Veículo / Placa",
+              render: (item) => (
+                <div>
+                  <span className="font-bold font-mono text-slate-900">{item.plate}</span>
+                  <span className="block text-xs text-slate-500 font-sans">{item.model}</span>
+                </div>
+              )
+            },
+            {
+              key: "memberSince",
+              header: "Cliente Desde",
+              render: (item) => <span className="text-xs text-slate-500">{item.memberSince}</span>
+            },
+            {
+              key: "status",
+              header: "Assinatura (R$ 50/mês)",
+              render: (item) => <StatusBadge status={item.status} size="sm" />
+            },
+            {
+              key: "actions",
+              header: "Ações",
+              align: "right",
+              render: () => (
+                <Button variant="outline" size="xs">
+                  Histórico
+                </Button>
+              )
+            }
+          ]}
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          emptyTitle="Nenhum cliente localizado"
+          emptyDescription="Tente buscar por outro termo ou placa."
+        />
+      </div>
     </div>
   );
 }

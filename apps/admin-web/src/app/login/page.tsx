@@ -1,11 +1,25 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Button } from "@grupo-j/ui-web";
+import {
+  GrupoJLogo,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  Input,
+  PasswordInput,
+  Button,
+  ShieldCheck,
+  Mail,
+  ArrowRight,
+  Lock
+} from "@grupo-j/ui-web";
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,7 +28,6 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simula validação inicial e direciona para etapa obrigatória de MFA
     setTimeout(() => {
       setIsLoading(false);
       router.push("/mfa");
@@ -22,54 +35,87 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#00091D] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-[#034EFE] items-center justify-center font-bold text-white text-xl mb-3 shadow-lg shadow-blue-500/20">
-            J
+        {/* Identificação Oficial do Backoffice */}
+        <div className="text-center mb-8 space-y-2">
+          <div className="flex justify-center mb-4">
+            <GrupoJLogo variant="light" subtitle="PAINEL ADMINISTRATIVO" size="lg" />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">GRUPO J</h2>
-          <p className="text-sm text-slate-400 mt-1">Painel Administrativo do Proprietário</p>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold uppercase tracking-wider">
+            <Lock size={12} className="text-blue-400" />
+            <span>Acesso Restrito à Diretoria & Operação</span>
+          </div>
+          <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1">
+            Gestão estratégica, auditoria financeira e monitoramento em tempo real do ecossistema.
+          </p>
         </div>
 
-        <Card className="shadow-2xl border-slate-800 bg-white">
-          <CardHeader>
-            <CardTitle>Acesso Restrito</CardTitle>
+        {/* Card de Autenticação */}
+        <Card variant="elevated" className="border border-slate-200/80 shadow-xl">
+          <CardHeader className="p-6 pb-2 border-b-0">
+            <CardTitle className="text-xl font-bold text-[#00091D]">
+              Entrar no Backoffice
+            </CardTitle>
             <CardDescription>
-              Insira suas credenciais corporativas. O segundo fator (MFA) será exigido no próximo passo.
+              Insira suas credenciais corporativas. O segundo fator (MFA) é obrigatório por política de segurança.
             </CardDescription>
           </CardHeader>
+
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 space-y-4">
               <Input
-                label="E-mail Corporativo"
+                label="E-mail Corporativo (@grupoj.com.br)"
                 type="email"
                 required
-                placeholder="seu.nome@grupoj.com.br"
+                placeholder="nome@grupoj.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                prefixIcon={<Mail size={16} />}
               />
-              <Input
-                label="Senha"
-                type="password"
+
+              <PasswordInput
+                label="Senha de Acesso"
                 required
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3">
-              <Button type="submit" variant="primary" className="w-full" isLoading={isLoading}>
-                Continuar para Verificação MFA
-              </Button>
-              <div className="text-center">
-                <Link href="#" className="text-xs text-slate-500 hover:text-slate-800">
-                  Problemas no acesso ou redefinição de chave?
-                </Link>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-slate-600">
+                  <input
+                    type="checkbox"
+                    className="rounded border-slate-300 text-[#034EFE] focus:ring-[#034EFE]"
+                  />
+                  <span>Dispositivo confiável</span>
+                </label>
+                <a href="#ajuda" className="font-semibold text-[#034EFE] hover:underline">
+                  Esqueceu a chave?
+                </a>
               </div>
+            </CardContent>
+
+            <CardFooter className="p-6 pt-0 flex flex-col gap-3">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full h-12 text-base font-bold shadow-md shadow-blue-600/20"
+                isLoading={isLoading}
+                rightIcon={<ArrowRight size={18} />}
+              >
+                Continuar para Etapa 2 (MFA)
+              </Button>
             </CardFooter>
           </form>
         </Card>
+
+        {/* Rodapé de Segurança */}
+        <div className="text-center text-[11px] text-slate-400 mt-6 flex items-center justify-center gap-1.5">
+          <ShieldCheck size={14} className="text-emerald-500" />
+          <span>Sessão protegida por trilha imutável e HMAC Blind Index</span>
+        </div>
       </div>
     </div>
   );

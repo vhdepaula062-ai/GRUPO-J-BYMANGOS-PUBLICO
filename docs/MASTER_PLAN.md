@@ -46,3 +46,4 @@ A construção do ecossistema é dividida em 5 fases sequenciais rigorosamente d
 1. Cada nova funcionalidade deve ser suportada por testes unitários e de integração no pacote `@grupo-j/domain` e `@grupo-j/validation`.
 2. Nenhuma migration SQL futura pode realizar `DROP COLUMN` ou alterações destrutivas sem plano de compatibilidade de leitura/escrita dupla.
 3. As políticas de RLS no PostgreSQL devem ser continuamente expandidas e testadas via pgTAP para impedir vazamento entre oficinas parceiras.
+4. O Design System corporativo oficial baseado em `Designref/` (`@grupo-j/ui-web`) é de uso exclusivo dos produtos web (`admin-web` e `workshop-web`). O ecossistema mobile nativo (`customer-mobile` e `@grupo-j/ui-mobile`) mantém isolamento arquitetural absoluto para evitar acoplamento de dependências ou regressões de build nativo.

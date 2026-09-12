@@ -2,13 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { BreakGlassBanner } from "@grupo-j/ui-web";
+import { BreakGlassBanner, Button, LogOut, Bell } from "@grupo-j/ui-web";
 
 export const AdminNavbar: React.FC<{ activeBreakGlass?: boolean }> = ({
   activeBreakGlass = false
 }) => {
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
+    <header className="sticky top-0 z-20 bg-white border-b border-slate-200/80">
       {activeBreakGlass && (
         <BreakGlassBanner
           engineerName="Engenheiro Mangos (Suporte N3)"
@@ -16,20 +16,33 @@ export const AdminNavbar: React.FC<{ activeBreakGlass?: boolean }> = ({
           expiresInMinutes={45}
         />
       )}
-      <div className="h-16 px-6 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <span>Ambiente:</span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">
-            Produção Homologada
+      <div className="h-16 px-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 text-xs text-slate-600">
+          <span className="font-semibold text-slate-800">Status da Rede:</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Produção Homologada & Auditada
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className="text-xs font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+        <div className="flex items-center gap-3">
+          <button
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors relative"
+            aria-label="Notificações operacionais"
           >
-            Sair
+            <Bell size={18} />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#034EFE]" />
+          </button>
+
+          <Link href="/login">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-slate-600 font-medium"
+              leftIcon={<LogOut size={14} />}
+            >
+              Sair
+            </Button>
           </Link>
         </div>
       </div>

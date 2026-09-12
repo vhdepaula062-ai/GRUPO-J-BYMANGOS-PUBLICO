@@ -1,15 +1,17 @@
+@import "@grupo-j/ui-web/src/theme/grupo-j-saas.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   --background: #F8FAFC;
-  --foreground: #0F172A;
+  --foreground: #00091D;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

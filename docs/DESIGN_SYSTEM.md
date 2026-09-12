@@ -5,13 +5,17 @@
 A identidade visual do Grupo J comunica:
 * **Solidez e Confiança**: Um ecossistema de manutenção automotiva profissional que cuida do patrimônio e segurança da família.
 * **Modernidade e Clareza**: Interfaces limpas, de alta legibilidade, com contraste acessível (WCAG AA/AAA).
-* **Usabilidade Direta**: Pensada para motoristas em situações cotidianas e atendentes de oficina com alta rotatividade operacional. Alvos de toque generosos (mínimo 44x44pt) e ausência de excessos visuais (sem efeito neon, sem glassmorphism agressivo e sem gradientes que comprometam a leitura).
+* **Usabilidade Direta**: Pensada para motoristas em situações cotidianas e atendentes de oficina com alta rotatividade operacional. Alvos de toque generosos (mínimo 44x44pt) e ausência de excessos visuais.
+
+> [!NOTE]
+> Para a especificação visual detalhada dos produtos web (`admin-web` e `workshop-web`) baseada nas referências oficiais da marca (`Designref/`), consulte o documento dedicado: [DESIGN_SYSTEM_SAAS.md](file:///c:/Users/knzao/Desktop/PROJETOS%20PROGRAMA%C3%87%C3%83O/CLIENTES/JOAQUIM/GRUPO%20J/docs/DESIGN_SYSTEM_SAAS.md).
+> As interfaces móveis nativas (`customer-mobile`) utilizam `@grupo-j/ui-mobile` com isolamento absoluto de dependências web.
 
 ---
 
 ## 2. Tokens de Cor Semânticos
 
-A paleta de cores provisória (baseada nas especificações do prompt mestre) é organizada em tokens semânticos rigorosamente definidos em `@grupo-j/design-tokens`:
+A paleta de cores oficial da marca é organizada em tokens semânticos rigorosamente definidos em `@grupo-j/design-tokens` e `@grupo-j/ui-web`:
 
 ### 2.1 Cores da Marca (Brand)
 * `brand.primary`: `#034EFE` (Azul Elétrico Principal — CTA principal, destaque de marca)

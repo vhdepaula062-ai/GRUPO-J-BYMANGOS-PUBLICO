@@ -1,0 +1,40 @@
+/**
+ * Tema Grupo J SaaS — Variáveis CSS Escopadas
+ * Não vaza estilos fora de [data-ui-theme="grupo-j-saas"]
+ */
+[data-ui-theme="grupo-j-saas"] {
+  --saas-brand-primary: #034EFE;
+  --saas-brand-primary-hover: #023ECC;
+  --saas-brand-primary-active: #012C99;
+  --saas-brand-primary-soft: #EFF6FF;
+  --saas-brand-primary-border: #BFDBFE;
+
+  --saas-brand-navy: #00091D;
+  --saas-brand-navy-hover: #0A1733;
+  --saas-brand-navy-card: #041129;
+  --saas-brand-navy-border: #13254A;
+
+  --saas-bg: #F8FAFC;
+  --saas-surface: #FFFFFF;
+  --saas-surface-subtle: #F1F5F9;
+  --saas-border: #E2E8F0;
+  --saas-border-strong: #CBD5E1;
+
+  --saas-text-primary: #00091D;
+  --saas-text-secondary: #475569;
+  --saas-text-muted: #94A3B8;
+
+  --saas-success: #059669;
+  --saas-success-bg: #ECFDF5;
+  --saas-warning: #D97706;
+  --saas-warning-bg: #FFFBEB;
+  --saas-danger: #DC2626;
+  --saas-danger-bg: #FEF2F2;
+  --saas-info: #034EFE;
+  --saas-info-bg: #EFF6FF;
+}
+
+[data-ui-theme="grupo-j-saas"] ::selection {
+  background-color: #034EFE;
+  color: #FFFFFF;
+}

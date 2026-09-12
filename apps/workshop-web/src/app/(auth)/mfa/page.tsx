@@ -1,8 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Button } from "@grupo-j/ui-web";
+import {
+  GrupoJLogo,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  Input,
+  Button,
+  ShieldCheck,
+  ArrowLeft
+} from "@grupo-j/ui-web";
 
 export default function WorkshopMfaPage() {
   const router = useRouter();
@@ -19,40 +32,67 @@ export default function WorkshopMfaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#00091D] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-[#034EFE] items-center justify-center font-bold text-white text-xl mb-3">
-            J
+        <div className="text-center mb-8 space-y-2">
+          <div className="flex justify-center mb-4">
+            <GrupoJLogo variant="light" subtitle="VERIFICAÇÃO DE SEGURANÇA" size="lg" />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Verificação em Duas Etapas</h2>
-          <p className="text-sm text-slate-400 mt-1">Proteção de acesso à sua oficina</p>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#034EFE] text-xs font-bold uppercase tracking-wider">
+            <ShieldCheck size={14} />
+            <span>MFA Compulsório</span>
+          </div>
+          <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1">
+            Autenticação de dois fatores para proteger a movimentação de vouchers e clientes da sua oficina.
+          </p>
         </div>
 
-        <Card className="shadow-2xl border-slate-800 bg-white">
-          <CardHeader>
-            <CardTitle>Código do Autenticador</CardTitle>
+        <Card variant="elevated" className="border border-slate-200/80 shadow-xl">
+          <CardHeader className="p-6 pb-2 border-b-0">
+            <CardTitle className="text-xl font-bold text-[#00091D]">
+              Código de Confirmação
+            </CardTitle>
             <CardDescription>
-              Digite o código gerado no seu aplicativo autenticador para confirmar sua identidade.
+              Digite o código de 6 dígitos gerado no seu aplicativo autenticador (Google Authenticator ou similar).
             </CardDescription>
           </CardHeader>
+
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 space-y-4">
               <Input
-                label="Código TOTP"
+                label="Código TOTP (6 dígitos)"
                 type="text"
                 required
                 maxLength={6}
-                placeholder="123456"
+                placeholder="000 000"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                className="text-center tracking-widest text-lg font-mono"
+                className="text-center tracking-[0.5em] text-2xl font-mono font-bold h-14"
+                autoFocus
               />
             </CardContent>
-            <CardFooter>
-              <Button type="submit" variant="primary" className="w-full" isLoading={isLoading}>
-                Confirmar e Entrar no Painel
+
+            <CardFooter className="p-6 pt-0 flex flex-col gap-3">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full h-12 text-base font-bold shadow-md shadow-blue-600/20"
+                isLoading={isLoading}
+                disabled={code.length < 6}
+              >
+                Confirmar e Acessar Painel
               </Button>
+
+              <div className="text-center pt-2">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#034EFE] transition-colors"
+                >
+                  <ArrowLeft size={14} />
+                  <span>Voltar para tela de login</span>
+                </Link>
+              </div>
             </CardFooter>
           </form>
         </Card>
