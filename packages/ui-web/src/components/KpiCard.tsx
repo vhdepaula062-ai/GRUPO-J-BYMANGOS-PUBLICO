@@ -5,7 +5,7 @@ import { cn } from "../utils";
 
 export interface KpiCardProps {
   title: string;
-  value: string;
+  value: React.ReactNode;
   subtitle?: string;
   icon?: React.ReactNode;
   badge?: {
@@ -31,7 +31,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   className
 }) => {
   return (
-    <Card variant="elevated" className={cn("relative overflow-hidden", className)}>
+    <Card variant="elevated" className={cn("relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-slate-200", className)}>
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">

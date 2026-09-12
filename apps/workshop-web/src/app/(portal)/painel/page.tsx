@@ -18,7 +18,11 @@ import {
   Award,
   Zap,
   Clock,
-  ArrowRight
+  ArrowRight,
+  StaggerContainer,
+  StaggerItem,
+  AnimatedCounter,
+  Reveal
 } from "@grupo-j/ui-web";
 
 interface Atendimento {
@@ -77,67 +81,78 @@ export default function WorkshopDashboardPage() {
         }
       />
 
-      {/* Grade de KPIs Executivos da Oficina */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <KpiCard
-          title="Clientes Vinculados"
-          value="184"
-          subtitle="Motoristas que escolheram esta unidade"
-          icon={<Users size={20} />}
-          badge={{ text: "+14 este mês", variant: "success" }}
-        />
+      {/* Grade de KPIs Executivos da Oficina em Stagger */}
+      <StaggerContainer staggerDelay={0.06} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <StaggerItem>
+          <KpiCard
+            title="Clientes Vinculados"
+            value={<AnimatedCounter value={184} duration={0.9} />}
+            subtitle="Motoristas que escolheram esta unidade"
+            icon={<Users size={20} />}
+            badge={{ text: "+14 este mês", variant: "success" }}
+          />
+        </StaggerItem>
 
-        <KpiCard
-          title="Atendimentos no Mês"
-          value="42"
-          subtitle="100% de vouchers elegíveis validados"
-          icon={<Wrench size={20} />}
-          badge={{ text: "Metas em dia", variant: "info" }}
-        />
+        <StaggerItem>
+          <KpiCard
+            title="Atendimentos no Mês"
+            value={<AnimatedCounter value={42} duration={0.8} />}
+            subtitle="100% de vouchers elegíveis validados"
+            icon={<Wrench size={20} />}
+            badge={{ text: "Metas em dia", variant: "info" }}
+          />
+        </StaggerItem>
 
-        <KpiCard
-          title="Mensalidade B2B"
-          value="R$ 500,00"
-          subtitle="Vencimento todo dia 10 (fatura paga)"
-          icon={<Receipt size={20} />}
-          badge={{ text: "Em dia", variant: "success" }}
-        />
+        <StaggerItem>
+          <KpiCard
+            title="Mensalidade B2B"
+            value="R$ 500,00"
+            subtitle="Vencimento todo dia 10 (fatura paga)"
+            icon={<Receipt size={20} />}
+            badge={{ text: "Em dia", variant: "success" }}
+          />
+        </StaggerItem>
 
-        <KpiCard
-          title="Avaliação da Rede"
-          value="4.9 ★"
-          subtitle="Índice de satisfação dos motoristas"
-          icon={<Award size={20} />}
-          badge={{ text: "Excelente", variant: "success" }}
-        />
-      </div>
+        <StaggerItem>
+          <KpiCard
+            title="Avaliação da Rede"
+            value="4.9 ★"
+            subtitle="Índice de satisfação dos motoristas"
+            icon={<Award size={20} />}
+            badge={{ text: "Excelente", variant: "success" }}
+          />
+        </StaggerItem>
+      </StaggerContainer>
 
-      {/* Card de Atalho em Destaque */}
-      <div className="bg-gradient-to-r from-[#00091D] to-[#041129] rounded-2xl p-6 text-white border border-[#13254A] flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg">
-        <div className="space-y-1 text-left w-full">
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">
-            <Clock size={12} />
-            <span>Validação Rápida</span>
+      {/* Card de Atalho em Destaque com Entrada Suave */}
+      <Reveal distance={16} duration={0.35}>
+        <div className="bg-gradient-to-r from-[#00091D] to-[#041129] rounded-2xl p-6 text-white border border-[#13254A] flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg transition-all duration-300 hover:border-blue-900/80">
+          <div className="space-y-1 text-left w-full">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">
+              <Clock size={12} />
+              <span>Validação Rápida</span>
+            </div>
+            <h3 className="text-lg font-bold text-white">Motorista chegou na oficina com voucher?</h3>
+            <p className="text-xs text-slate-400 max-w-xl">
+              Insira o código do voucher ou placa no check-in para liberar o benefício preventivo em menos de 10 segundos.
+            </p>
           </div>
-          <h3 className="text-lg font-bold text-white">Motorista chegou na oficina com voucher?</h3>
-          <p className="text-xs text-slate-400 max-w-xl">
-            Insira o código do voucher ou placa no check-in para liberar o benefício preventivo em menos de 10 segundos.
-          </p>
+          <Link href="/check-in" className="shrink-0 w-full md:w-auto">
+            <Button variant="primary" size="md" className="w-full md:w-auto shadow-md shadow-blue-600/30" rightIcon={<ArrowRight size={16} />}>
+              Abrir Validador 120s
+            </Button>
+          </Link>
         </div>
-        <Link href="/check-in" className="shrink-0 w-full md:w-auto">
-          <Button variant="primary" size="md" className="w-full md:w-auto" rightIcon={<ArrowRight size={16} />}>
-            Abrir Validador 120s
-          </Button>
-        </Link>
-      </div>
+      </Reveal>
 
       {/* Tabela de Atendimentos Recentes */}
-      <Card variant="elevated">
-        <CardHeader>
-          <CardTitle>Atendimentos Realizados Recentemente</CardTitle>
-          <span className="text-xs text-slate-400 font-medium">Atualizado em tempo real</span>
-        </CardHeader>
-        <CardContent className="p-0">
+      <Reveal distance={16} duration={0.35}>
+        <Card variant="elevated">
+          <CardHeader>
+            <CardTitle>Atendimentos Realizados Recentemente</CardTitle>
+            <span className="text-xs text-slate-400 font-medium">Atualizado em tempo real</span>
+          </CardHeader>
+          <CardContent className="p-0">
           <DataTable
             columns={[
               {
@@ -185,6 +200,7 @@ export default function WorkshopDashboardPage() {
           />
         </CardContent>
       </Card>
+      </Reveal>
     </div>
   );
 }

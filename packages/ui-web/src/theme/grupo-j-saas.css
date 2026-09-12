@@ -2,6 +2,8 @@
  * Tema Grupo J SaaS — Variáveis CSS Escopadas
  * Não vaza estilos fora de [data-ui-theme="grupo-j-saas"]
  */
+@import "../motion/motion.css";
+
 [data-ui-theme="grupo-j-saas"] {
   --saas-brand-primary: #034EFE;
   --saas-brand-primary-hover: #023ECC;

@@ -9,11 +9,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = "default", ...props }, ref) => {
     const variantStyles = {
       default: "bg-white border border-slate-200/80 rounded-2xl shadow-sm",
-      elevated: "bg-white rounded-2xl shadow-md shadow-slate-200/50 border border-slate-100",
+      elevated: "bg-white rounded-2xl shadow-md shadow-slate-200/50 border border-slate-100 transition-all duration-200 hover:shadow-lg hover:shadow-slate-200/60",
       bordered: "bg-white border-2 border-slate-200 rounded-2xl shadow-sm",
-      navy: "bg-[#041129] border border-[#13254A] text-white rounded-2xl shadow-lg",
+      navy: "bg-[#041129] border border-[#13254A] text-white rounded-2xl shadow-lg transition-all duration-200",
       interactive:
-        "bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-150 cursor-pointer"
+        "bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md hover:border-[#034EFE]/40 hover:-translate-y-0.5 transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] cursor-pointer"
     };
 
     return <div ref={ref} className={cn(variantStyles[variant], className)} {...props} />;

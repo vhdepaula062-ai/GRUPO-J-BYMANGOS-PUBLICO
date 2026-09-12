@@ -19,7 +19,9 @@ import {
   Building2,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  BlurReveal,
+  Reveal
 } from "@grupo-j/ui-web";
 
 export default function SejaParceiroPage() {
@@ -38,16 +40,19 @@ export default function SejaParceiroPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
       {/* Cabeçalho de Navegação e Logo */}
-      <div className="w-full max-w-xl mb-6 flex items-center justify-between">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#034EFE] transition-colors">
-          <ArrowLeft size={16} />
-          <span>Voltar ao Início</span>
-        </Link>
-        <GrupoJLogo variant="light" size="sm" />
-      </div>
+      <Reveal direction="down" distance={12} className="w-full max-w-xl mb-6">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#034EFE] transition-colors">
+            <ArrowLeft size={16} />
+            <span>Voltar ao Início</span>
+          </Link>
+          <GrupoJLogo variant="light" size="sm" />
+        </div>
+      </Reveal>
 
       <div className="w-full max-w-xl">
-        <Card variant="elevated" className="border border-slate-200/80 shadow-xl">
+        <BlurReveal initialBlur={8} duration={0.4}>
+          <Card variant="elevated" className="border border-slate-200/80 shadow-xl">
           {submitted ? (
             <CardContent className="p-8 sm:p-12 text-center space-y-4">
               <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto">
@@ -163,6 +168,7 @@ export default function SejaParceiroPage() {
             </form>
           )}
         </Card>
+        </BlurReveal>
       </div>
     </div>
   );

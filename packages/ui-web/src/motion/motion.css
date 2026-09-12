@@ -1,0 +1,106 @@
+/**
+ * Estilos utilitários de Motion Design para aplicações web Grupo J
+ * Otimizados para GPU e respeitando preferências de acessibilidade
+ */
+
+/* 1. Perspectiva 3D e Preservação Espacial */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 2. Micro-animação de Flutuação Suave para Elementos Hero */
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes floatGentleAlt {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float-slow {
+  animation: floatGentle 5s ease-in-out infinite;
+}
+
+.animate-float-tag-1 {
+  animation: floatGentleAlt 4.2s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+.animate-float-tag-2 {
+  animation: floatGentle 4.8s ease-in-out infinite;
+  animation-delay: 0.7s;
+}
+
+.animate-float-tag-3 {
+  animation: floatGentleAlt 5.4s ease-in-out infinite;
+  animation-delay: 1.2s;
+}
+
+/* 3. Indicador animado de link de navegação (Micro-Underline) */
+.nav-link-animated {
+  position: relative;
+}
+
+.nav-link-animated::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #034EFE;
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 9999px;
+}
+
+.nav-link-animated:hover::after,
+.nav-link-animated:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* 4. Iluminação Difusa para Seções Escuras */
+.navy-diffuse-glow {
+  background: radial-gradient(circle at 50% 50%, rgba(3, 78, 254, 0.12) 0%, rgba(0, 9, 29, 0) 70%);
+}
+
+/* 5. Fallback Obrigatório para prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-float-slow,
+  .animate-float-tag-1,
+  .animate-float-tag-2,
+  .animate-float-tag-3 {
+    animation: none !important;
+    transform: none !important;
+  }
+}

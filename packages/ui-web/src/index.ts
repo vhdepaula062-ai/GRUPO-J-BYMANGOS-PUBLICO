@@ -4,3 +4,4 @@ export * from "./icons";
 export * from "./components";
 export * from "./layouts";
 export * from "./patterns";
+export * from "./motion";
