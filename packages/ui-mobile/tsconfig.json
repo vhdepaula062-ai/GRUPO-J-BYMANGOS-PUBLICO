@@ -1,0 +1,9 @@
+{
+  "extends": "@grupo-j/typescript-config/react-native.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*"]
+}

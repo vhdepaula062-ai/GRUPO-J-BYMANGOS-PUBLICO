@@ -1,0 +1,99 @@
+openapi: 3.1.0
+info:
+  title: API Central do Ecossistema Grupo J
+  version: 0.1.0
+  description: Backend unificado da plataforma multiempresa de manutenção e prevenção automotiva por assinatura Grupo J.
+
+servers:
+  - url: http://localhost:3002
+    description: Servidor Local de Desenvolvimento
+  - url: https://api.grupoj.com.br
+    description: Servidor Oficial de Produção
+
+paths:
+  /api/health:
+    get:
+      summary: Health Check da API
+      description: Retorna o status de saúde e liveness da API e dependências.
+      responses:
+        '200':
+          description: Sistema operacional
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  version:
+                    type: string
+                    example: 0.1.0
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/v1/workshops:
+    get:
+      summary: Listar Oficinas Credenciadas
+      description: Retorna oficinas credenciadas para seleção e busca.
+      responses:
+        '200':
+          description: Lista de oficinas recuperada com sucesso
+
+  /api/v1/workshops/assignments:
+    post:
+      summary: Vincular Oficina Parceira
+      description: Vincula o motorista a uma oficina parceira respeitando a trava de 30 dias.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workshopId
+              properties:
+                workshopId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Oficina vinculada com sucesso
+        '422':
+          description: Bloqueio por período de carência (30 dias)
+
+  /api/v1/benefits/validate:
+    post:
+      summary: Validar Resgate de Benefício
+      description: Valida o voucher de benefício para atendimento físico na oficina.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - voucherToken
+                - workshopId
+                - vehiclePlate
+              properties:
+                voucherToken:
+                  type: string
+                workshopId:
+                  type: string
+                vehiclePlate:
+                  type: string
+      responses:
+        '200':
+          description: Benefício autorizado
+        '422':
+          description: Regra de negócio recusada
+
+  /api/v1/webhooks/payments:
+    post:
+      summary: Recepção de Webhook Financeiro
+      description: Processa eventos do gateway de forma idempotente.
+      responses:
+        '200':
+          description: Webhook aceito e enfileirado para outbox

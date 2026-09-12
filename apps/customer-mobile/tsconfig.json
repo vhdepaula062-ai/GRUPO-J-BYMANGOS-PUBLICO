@@ -1,0 +1,10 @@
+{
+  "extends": "@grupo-j/typescript-config/react-native.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}

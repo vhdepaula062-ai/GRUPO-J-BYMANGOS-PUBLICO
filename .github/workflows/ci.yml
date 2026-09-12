@@ -1,0 +1,44 @@
+name: CI Grupo J
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    name: Lint, Typecheck & Testes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.1
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: "pnpm"
+
+      - name: Instalar Dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Verificação de Formatação
+        run: pnpm format:check
+
+      - name: Lint de Código
+        run: pnpm lint
+
+      - name: Typecheck TypeScript Strict
+        run: pnpm typecheck
+
+      - name: Testes Unitários e de Integração
+        run: pnpm test
+
+      - name: Build das Aplicações Web
+        run: pnpm build
