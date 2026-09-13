@@ -16,22 +16,59 @@ import {
   ShieldCheck,
   Mail,
   ArrowRight,
-  Lock
+  Lock,
+  AlertCircle
 } from "@grupo-j/ui-web";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    setError(null);
+
+    const supabase = createClient();
+
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password
+    });
+
+    if (authError) {
+      const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
+        process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
+        authError.message.includes("Failed to fetch") ||
+        authError.message.includes("NetworkError");
+
+      if (isPlaceholder) {
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
       setIsLoading(false);
-      router.push("/mfa");
-    }, 600);
+      // Traduzir erros do Supabase para português
+      if (authError.message.includes("Invalid login credentials")) {
+        setError("E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.");
+      } else if (authError.message.includes("Email not confirmed")) {
+        setError("Confirme seu e-mail antes de acessar. Verifique sua caixa de entrada.");
+      } else if (authError.message.includes("Too many requests")) {
+        setError("Muitas tentativas de login. Aguarde alguns minutos e tente novamente.");
+      } else {
+        setError("Erro ao autenticar. Tente novamente ou entre em contato com o suporte.");
+      }
+      return;
+    }
+
+    // Login bem-sucedido → redirecionar para o dashboard
+    router.push("/dashboard");
+    router.refresh();
   };
 
   return (
@@ -44,12 +81,20 @@ export default function AdminLoginPage() {
           </div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold uppercase tracking-wider">
             <Lock size={12} className="text-blue-400" />
-            <span>Acesso Restrito à Diretoria & Operação</span>
+            <span>Acesso Restrito à Diretoria &amp; Operação</span>
           </div>
           <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1">
             Gestão estratégica, auditoria financeira e monitoramento em tempo real do ecossistema.
           </p>
         </div>
+
+        {/* Mensagem de Erro */}
+        {error && (
+          <div className="mb-4 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Card de Autenticação */}
         <Card variant="elevated" className="border border-slate-200/80 shadow-xl">
@@ -65,13 +110,14 @@ export default function AdminLoginPage() {
           <form onSubmit={handleSubmit}>
             <CardContent className="p-6 space-y-4">
               <Input
-                label="E-mail Corporativo (@grupoj.com.br)"
+                label="E-mail Corporativo"
                 type="email"
                 required
                 placeholder="nome@grupoj.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 prefixIcon={<Mail size={16} />}
+                disabled={isLoading}
               />
 
               <PasswordInput
@@ -80,6 +126,7 @@ export default function AdminLoginPage() {
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
               />
 
               <div className="flex items-center justify-between text-xs pt-1">
@@ -105,7 +152,7 @@ export default function AdminLoginPage() {
                 isLoading={isLoading}
                 rightIcon={<ArrowRight size={18} />}
               >
-                Continuar para Etapa 2 (MFA)
+                {isLoading ? "Autenticando..." : "Entrar no Painel"}
               </Button>
             </CardFooter>
           </form>

@@ -1,9 +1,55 @@
 /**
- * Estilos utilitários de Motion Design para aplicações web Grupo J
+ * Estilos utilitários de Motion Design e Glassmorphism — Grupo J
  * Otimizados para GPU e respeitando preferências de acessibilidade
  */
 
-/* 1. Perspectiva 3D e Preservação Espacial */
+/* 1. Utilitários de Glassmorphism Premium */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 30px -5px rgba(3, 78, 254, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02);
+}
+
+.glass-panel-interactive {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 30px -5px rgba(3, 78, 254, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-panel-interactive:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(3, 78, 254, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 35px -10px rgba(3, 78, 254, 0.12), 0 6px 16px -4px rgba(0, 0, 0, 0.03);
+}
+
+.glass-panel-navy {
+  background: rgba(4, 17, 41, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(3, 78, 254, 0.25);
+  box-shadow: 0 15px 35px -5px rgba(0, 9, 29, 0.6);
+}
+
+.glass-panel-navy:hover {
+  border-color: rgba(3, 78, 254, 0.5);
+  box-shadow: 0 20px 40px -5px rgba(3, 78, 254, 0.2);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* 2. Perspectiva 3D e Preservação Espacial */
 .perspective-1000 {
   perspective: 1000px;
 }
@@ -17,7 +63,7 @@
   -webkit-backface-visibility: hidden;
 }
 
-/* 2. Micro-animação de Flutuação Suave para Elementos Hero */
+/* 3. Micro-animação de Flutuação Suave para Elementos Hero */
 @keyframes floatGentle {
   0%, 100% {
     transform: translateY(0px);
@@ -32,7 +78,7 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-6px);
+    transform: translateY(-5px);
   }
 }
 
@@ -55,7 +101,7 @@
   animation-delay: 1.2s;
 }
 
-/* 3. Indicador animado de link de navegação (Micro-Underline) */
+/* 4. Indicador animado de link de navegação (Micro-Underline) */
 .nav-link-animated {
   position: relative;
 }
@@ -80,12 +126,19 @@
   transform-origin: bottom left;
 }
 
-/* 4. Iluminação Difusa para Seções Escuras */
+/* 5. Iluminação Difusa para Seções Escuras */
 .navy-diffuse-glow {
-  background: radial-gradient(circle at 50% 50%, rgba(3, 78, 254, 0.12) 0%, rgba(0, 9, 29, 0) 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(3, 78, 254, 0.15) 0%, rgba(0, 9, 29, 0) 70%);
 }
 
-/* 5. Fallback Obrigatório para prefers-reduced-motion */
+.ambient-glow-blue {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(3, 78, 254, 0.08) 0%, rgba(3, 78, 254, 0) 70%);
+  pointer-events: none;
+}
+
+/* 6. Fallback Obrigatório para prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

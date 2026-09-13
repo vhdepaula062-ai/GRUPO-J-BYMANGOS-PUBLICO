@@ -54,5 +54,15 @@ export {
   MoreVertical,
   SlidersHorizontal,
   History,
-  Tag
+  Tag,
+  Copy,
+  Gift,
+  Camera,
+  FileSpreadsheet,
+  MessageSquare,
+  UserCheck,
+  KeyRound,
+  ArrowDownLeft,
+  ArrowUpRight,
+  BarChart3
 } from "lucide-react";

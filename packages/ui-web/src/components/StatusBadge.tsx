@@ -32,6 +32,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = "md", c
       break;
 
     case "pending":
+    case "pending_approval":
+    case "pending_review":
     case "pendente":
     case "trial":
     case "in_review":
@@ -39,7 +41,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = "md", c
     case "em análise":
     case "aguardando":
       variant = "warning";
-      label = status === "pending" ? "Pendente" : status === "trial" ? "Período de Testes" : status;
+      label = status === "pending_approval" ? "Aguardando Aprovação" : status === "pending" ? "Pendente" : status === "trial" ? "Período de Testes" : status;
       break;
 
     case "overdue":

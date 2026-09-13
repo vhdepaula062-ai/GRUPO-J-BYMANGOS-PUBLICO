@@ -19,3 +19,4 @@ export function createServerAdminClient(supabaseUrl: string, serviceRoleKey: str
 }
 
 export { SupabaseClient };
+export * from "./workshops-store";

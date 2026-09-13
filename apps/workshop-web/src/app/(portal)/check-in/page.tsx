@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 import {
   PageHeader,
   Card,
@@ -11,193 +11,199 @@ import {
   CardFooter,
   Input,
   Button,
-  Badge,
   Zap,
   CheckCircle2,
-  Clock,
-  Car,
   ShieldCheck,
   AlertCircle
 } from "@grupo-j/ui-web";
+import { validateVoucherAction, type ValidateVoucherResult } from "./actions";
 
 export default function CheckInPage() {
   const [voucherToken, setVoucherToken] = useState("");
   const [plate, setPlate] = useState("");
   const [odometer, setOdometer] = useState("");
-  const [isValidating, setIsValidating] = useState(false);
-  const [validationResult, setValidationResult] = useState<{
-    valid: boolean;
-    benefitName?: string;
-    customerName?: string;
-    vehicleModel?: string;
-    message?: string;
-  } | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [validationResult, setValidationResult] = useState<ValidateVoucherResult | null>(null);
 
   const handleValidate = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsValidating(true);
     setValidationResult(null);
 
-    setTimeout(() => {
-      setIsValidating(false);
-      if (voucherToken.length >= 5 && plate.length >= 7) {
-        setValidationResult({
-          valid: true,
-          benefitName: "Alinhamento 3D e Balanceamento",
-          customerName: "João Pedro Silva",
-          vehicleModel: "Volkswagen Gol 1.6 MSI (2022)",
-          message: "Benefício preventivo autorizado com sucesso. Motorista com assinatura ativa e sem pendências."
-        });
-      } else {
-        setValidationResult({
-          valid: false,
-          message: "Voucher não localizado ou placa incorreta. Verifique o código apresentado no app do cliente."
-        });
-      }
-    }, 600);
+    startTransition(async () => {
+      const res = await validateVoucherAction({
+        voucherToken,
+        plate,
+        odometer
+      });
+      setValidationResult(res);
+    });
   };
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto text-left">
+    <div className="space-y-6 max-w-4xl mx-auto text-left">
       <PageHeader
-        title="Check-in de Veículo & Validador de Voucher"
-        subtitle="Validação instantânea de tokens de benefício preventivo com proteção contra duplicidade."
-        actions={
-          <Badge variant="info" size="md">
-            <Clock size={13} className="mr-1 inline" />
-            Tokens com validade de 120s
-          </Badge>
-        }
+        title="Validação de Voucher & Check-in"
+        subtitle="Consulte o código gerado no aplicativo do motorista ou a placa do veículo para liberar o atendimento preventivo."
       />
 
-      <Card variant="elevated">
-        <CardHeader>
-          <div className="space-y-1">
-            <CardTitle>Validação do Benefício</CardTitle>
-            <CardDescription>
-              Peça ao motorista para abrir a aba &quot;Benefícios&quot; no aplicativo Grupo J e digitar o código gerado.
-            </CardDescription>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#034EFE] flex items-center justify-center shrink-0">
-            <Zap size={20} className="text-amber-500" />
-          </div>
-        </CardHeader>
-
-        <form onSubmit={handleValidate}>
-          <CardContent className="space-y-4">
-            <Input
-              label="Código do Voucher (ou Token QR Code)"
-              required
-              placeholder="Ex: GJ-94021"
-              value={voucherToken}
-              onChange={(e) => setVoucherToken(e.target.value.toUpperCase())}
-              prefixIcon={<Zap size={16} className="text-amber-500" />}
-              helperText="O voucher é temporário (120 segundos) para impedir o reaproveitamento."
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Placa do Veículo"
-                required
-                maxLength={8}
-                placeholder="ABC1D23"
-                value={plate}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                prefixIcon={<Car size={16} />}
-              />
-              <Input
-                label="Quilometragem Atual (Km)"
-                type="number"
-                placeholder="Ex: 45000"
-                value={odometer}
-                onChange={(e) => setOdometer(e.target.value)}
-              />
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col gap-3">
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              className="w-full h-12 text-base font-bold shadow-md shadow-blue-600/20"
-              isLoading={isValidating}
-            >
-              Verificar Elegibilidade do Benefício
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-
-      {/* Resultado da Validação */}
-      {validationResult && (
-        <Card
-          className={
-            validationResult.valid
-              ? "border-emerald-200 bg-emerald-50/40 animate-in fade-in"
-              : "border-red-200 bg-red-50/40 animate-in fade-in"
-          }
-        >
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                  validationResult.valid
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {validationResult.valid ? <ShieldCheck size={28} /> : <AlertCircle size={28} />}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Formulário Principal */}
+        <div className="md:col-span-2">
+          <Card variant="elevated">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <span className="p-2 bg-blue-50 text-[#034EFE] rounded-lg">
+                  <Zap className="w-5 h-5" />
+                </span>
+                <div>
+                  <CardTitle>Entrada de Box / Validação</CardTitle>
+                  <CardDescription>
+                    Insira o voucher de 6 a 8 dígitos ou a placa do veículo.
+                  </CardDescription>
+                </div>
               </div>
+            </CardHeader>
 
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-lg font-bold text-[#00091D]">
-                    {validationResult.valid
-                      ? validationResult.benefitName
-                      : "Validação Recusada"}
-                  </h4>
-                  {validationResult.valid && (
-                    <Badge variant="success" size="sm">
-                      Autorizado
-                    </Badge>
-                  )}
+            <form onSubmit={handleValidate}>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Código do Voucher (Apresentado pelo Cliente)
+                  </label>
+                  <Input
+                    placeholder="Ex: GJ-94021"
+                    value={voucherToken}
+                    onChange={(e) => setVoucherToken(e.target.value.toUpperCase())}
+                    className="font-mono text-base uppercase tracking-widest"
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    O cliente gera esse código na aba &quot;Benefícios&quot; do app dele.
+                  </span>
                 </div>
 
-                {validationResult.valid && (
-                  <div className="p-3 bg-white rounded-xl border border-emerald-200 text-xs text-slate-700 space-y-1">
-                    <p>
-                      <strong>Motorista:</strong> {validationResult.customerName}
-                    </p>
-                    <p>
-                      <strong>Veículo:</strong> {validationResult.vehicleModel} — Placa:{" "}
-                      <span className="font-mono font-bold">{plate}</span>
-                    </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Placa do Veículo (Opcional)
+                    </label>
+                    <Input
+                      placeholder="Ex: BRA2E19"
+                      value={plate}
+                      onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                      className="font-mono uppercase tracking-wider"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Km Atual (Odômetro)
+                    </label>
+                    <Input
+                      placeholder="Ex: 48500"
+                      type="number"
+                      value={odometer}
+                      onChange={(e) => setOdometer(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {validationResult && (
+                  <div
+                    className={`p-4 rounded-xl border mt-4 animate-in fade-in flex items-start gap-3 ${
+                      validationResult.valid
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                        : "bg-rose-50 border-rose-200 text-rose-900"
+                    }`}
+                  >
+                    {validationResult.valid ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1 text-xs">
+                      <p className="font-bold text-sm">
+                        {validationResult.valid ? "Atendimento Autorizado" : "Validação Não Aprovada"}
+                      </p>
+                      <p>{validationResult.message}</p>
+                      {validationResult.customerName && (
+                        <p className="font-semibold text-slate-800 pt-1">
+                          Motorista: {validationResult.customerName}
+                          {validationResult.vehicleModel ? ` • ${validationResult.vehicleModel}` : ""}
+                        </p>
+                      )}
+                      {validationResult.benefitName && (
+                        <p className="text-emerald-700 font-bold">
+                          Serviço: {validationResult.benefitName}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
+              </CardContent>
 
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  {validationResult.message}
-                </p>
+              <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-slate-100 pt-4">
+                <span className="text-xs text-slate-500 text-center sm:text-left">
+                  Liquidação do repasse em até 2 dias úteis
+                </span>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  disabled={isPending || (!voucherToken && !plate)}
+                  className="w-full sm:w-auto bg-[#034EFE] hover:bg-blue-700 font-bold px-6"
+                >
+                  {isPending ? "Validando no Banco..." : "Consultar & Validar"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </div>
 
-                {validationResult.valid && (
-                  <div className="pt-2">
-                    <Button
-                      variant="primary"
-                      size="md"
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                      leftIcon={<CheckCircle2 size={16} />}
-                      onClick={() => alert("Atendimento iniciado com sucesso! O voucher foi liquidado.")}
-                    >
-                      Confirmar e Abrir Ordem de Serviço
-                    </Button>
-                  </div>
-                )}
+        {/* Instruções de Operação */}
+        <div className="space-y-4">
+          <Card variant="default">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Passo a Passo</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-xs text-slate-600">
+              <div className="flex gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
+                  1
+                </span>
+                <p>Peça ao motorista para exibir o voucher ativo na tela do celular dele.</p>
               </div>
+              <div className="flex gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
+                  2
+                </span>
+                <p>Digite o código acima e confirme a placa do carro no balcão.</p>
+              </div>
+              <div className="flex gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
+                  3
+                </span>
+                <p>Realize o procedimento preventivo no box mecânico.</p>
+              </div>
+              <div className="flex gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
+                  4
+                </span>
+                <p>O repasse financeiro do serviço será lançado automaticamente no seu extrato.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs text-slate-600 flex items-center gap-3">
+            <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+            <div>
+              <p className="font-bold text-slate-800">Garantia Grupo J</p>
+              <p className="text-[11px] text-slate-500">
+                Todo atendimento validado possui repasse garantido pelo Grupo J.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

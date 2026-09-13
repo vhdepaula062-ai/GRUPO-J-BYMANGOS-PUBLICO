@@ -24,17 +24,35 @@ import {
   Reveal
 } from "@grupo-j/ui-web";
 
+import { registerPartnerWorkshopAction } from "./actions";
+
 export default function SejaParceiroPage() {
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({
+    responsibleName: "",
+    tradeName: "",
+    cnpj: "",
+    phone: "",
+    email: "",
+    city: "",
+    state: ""
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setErrorMessage(null);
+
+    const res = await registerPartnerWorkshopAction(formData);
+    setIsLoading(false);
+    if (res.success) {
       setSubmitted(true);
-    }, 800);
+    } else {
+      setErrorMessage(res.message);
+    }
   };
 
   return (
@@ -90,10 +108,18 @@ export default function SejaParceiroPage() {
               </CardHeader>
 
               <CardContent className="p-6 sm:p-8 space-y-4">
+                {errorMessage && (
+                  <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                    {errorMessage}
+                  </div>
+                )}
+
                 <Input
                   label="Nome Completo do Responsável"
                   required
                   placeholder="Ex: Carlos Eduardo Silva"
+                  value={formData.responsibleName}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, responsibleName: e.target.value }))}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -102,11 +128,15 @@ export default function SejaParceiroPage() {
                     required
                     placeholder="Ex: Auto Center Progresso"
                     prefixIcon={<Building2 size={16} />}
+                    value={formData.tradeName}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, tradeName: e.target.value }))}
                   />
                   <Input
                     label="CNPJ"
                     required
                     placeholder="00.000.000/0001-00"
+                    value={formData.cnpj}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cnpj: e.target.value }))}
                   />
                 </div>
 
@@ -116,6 +146,8 @@ export default function SejaParceiroPage() {
                     required
                     placeholder="(11) 99999-9999"
                     prefixIcon={<Phone size={16} />}
+                    value={formData.phone}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
                   />
                   <Input
                     label="E-mail Comercial"
@@ -123,6 +155,8 @@ export default function SejaParceiroPage() {
                     required
                     placeholder="contato@oficina.com.br"
                     prefixIcon={<Mail size={16} />}
+                    value={formData.email}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                   />
                 </div>
 
@@ -133,10 +167,19 @@ export default function SejaParceiroPage() {
                       required
                       placeholder="São Paulo"
                       prefixIcon={<MapPin size={16} />}
+                      value={formData.city}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <Input label="UF" required maxLength={2} placeholder="SP" />
+                    <Input
+                      label="UF"
+                      required
+                      maxLength={2}
+                      placeholder="SP"
+                      value={formData.state}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value.toUpperCase() }))}
+                    />
                   </div>
                 </div>
 
