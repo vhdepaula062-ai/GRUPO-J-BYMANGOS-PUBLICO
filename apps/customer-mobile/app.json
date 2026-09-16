@@ -40,7 +40,7 @@
     },
     "extra": {
       "environment": "staging",
-      "apiUrl": "https://staging-api.grupoj.com.br",
+      "apiUrl": "https://grupo-j-api.vercel.app",
       "paymentMode": "sandbox",
       "planMonthlyPrice": 50.00
     }
