@@ -20,6 +20,25 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
   const [newTitle, setNewTitle] = useState("");
   const [newWorkshop, setNewWorkshop] = useState("Rede Credenciada Geral");
   const [newDescription, setNewDescription] = useState("");
+  const [newImageUrl, setNewImageUrl] = useState("");
+  const [newDiscount, setNewDiscount] = useState<number | "">("");
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("A imagem selecionada deve ter no máximo 5MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setNewImageUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleModerate = (id: string, newStatus: "approved" | "rejected") => {
     startTransition(async () => {
@@ -46,15 +65,27 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
     if (!newTitle || !newDescription) return;
     startTransition(async () => {
       try {
-        const created = await createNetworkPromotion({
+        const result = await createNetworkPromotion({
           title: newTitle,
           description: newDescription,
-          workshopName: newWorkshop
+          workshopName: newWorkshop,
+          imageUrl: newImageUrl,
+          discountPercentage: newDiscount ? Number(newDiscount) : undefined
         });
-        setPromos((prev) => [{ ...created, workshop: { trade_name: newWorkshop } }, ...prev]);
+        const createdPromo: PromotionRow = {
+          id: result.promotion?.id || `promo-admin-${Date.now()}`,
+          title: newTitle,
+          description: newDescription,
+          image_url: newImageUrl || null,
+          status: "active",
+          created_at: new Date().toISOString()
+        };
+        setPromos((prev) => [createdPromo, ...prev]);
         setIsModalOpen(false);
         setNewTitle("");
         setNewDescription("");
+        setNewImageUrl("");
+        setNewDiscount("");
         setFeedback("Nova campanha promocional criada e publicada com sucesso!");
         setTimeout(() => setFeedback(null), 4000);
       } catch (err: unknown) {
@@ -246,18 +277,134 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Oficina ou Abrangência *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Todas as Credenciadas ou Barra"
+                    value={newWorkshop}
+                    onChange={(e) => setNewWorkshop(e.target.value)}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Desconto (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="Ex: 30"
+                    value={newDiscount}
+                    onChange={(e) => setNewDiscount(e.target.value ? Number(e.target.value) : "")}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
+                  />
+                </div>
+              </div>
+
+              {/* Seletor de Imagem com Enquadramento 16:9 */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Oficina ou Abrangência *
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Foto ou Banner da Campanha *
+                  </label>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Proporção ideal: 16:9 (ex: 800 × 450 px)
+                  </span>
+                </div>
+
                 <input
-                  type="text"
-                  placeholder="Ex: Auto Center Barra ou Todas as Credenciadas"
-                  value={newWorkshop}
-                  onChange={(e) => setNewWorkshop(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
-                  required
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*"
+                  className="hidden"
                 />
+
+                {newImageUrl ? (
+                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-emerald-400 bg-slate-900 group shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={newImageUrl}
+                      alt="Preview da campanha"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex flex-col justify-between p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-500 text-white shadow">
+                          ✓ Enquadramento 16:9 Seguro
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setNewImageUrl("")}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white font-semibold transition shadow"
+                        >
+                          ✕ Remover foto
+                        </button>
+                      </div>
+                      <p className="text-white text-xs font-bold truncate">
+                        Visualização idêntica à do aplicativo móvel
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-video w-full rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#034EFE] bg-slate-50 hover:bg-blue-50/40 cursor-pointer flex flex-col items-center justify-center p-4 transition text-center group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-100/70 text-[#034EFE] flex items-center justify-center text-lg mb-2 group-hover:scale-110 transition-transform">
+                      📷
+                    </div>
+                    <p className="text-xs font-bold text-slate-700">
+                      Clique para escolher imagem do computador
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      JPG, PNG ou WEBP (Proporção 16:9 recomendada • máx. 5MB)
+                    </p>
+                  </div>
+                )}
+
+                {/* Modelos rápidos automotivos 16:9 */}
+                <div className="mt-2">
+                  <p className="text-[11px] font-semibold text-slate-500 mb-1.5">
+                    Ou selecione um modelo fotográfico em 16:9:
+                  </p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setNewImageUrl("https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Oficina Rede
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewImageUrl("https://images.unsplash.com/photo-1578844251758-2f71da64c96f?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Pneus & Rodas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewImageUrl("https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Freios & Revisão
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewImageUrl("https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Ar-Condicionado
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -265,7 +412,7 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
                   Regras e Condições *
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Descreva as condições da promoção para os motoristas..."
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}

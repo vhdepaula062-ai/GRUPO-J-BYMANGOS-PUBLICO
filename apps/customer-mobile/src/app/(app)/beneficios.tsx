@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
@@ -24,7 +24,14 @@ export default function BeneficiosScreen() {
     const [benefits, vehicles] = await Promise.all([api.getBenefits<ServiceBenefit[]>(), api.getVehicles<Vehicle[]>()]);
     return { data: { benefits: benefits.data, vehicles: vehicles.data } };
   }, []);
-  const { data, loading, error } = useApiResource(load);
+  const { data, loading, error, reload } = useApiResource(load);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }, [reload]);
 
   useEffect(() => {
     if (!activeVoucher || activeVoucher.secondsRemaining <= 0) return;
@@ -49,7 +56,18 @@ export default function BeneficiosScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[tokens.colors.brand.primary]}
+            tintColor={tokens.colors.brand.primary}
+          />
+        }
+      >
+
         <View style={styles.header}>
           <Text style={styles.title}>Serviços Inclusos no Plano</Text>
           <Text style={styles.subtitle}>

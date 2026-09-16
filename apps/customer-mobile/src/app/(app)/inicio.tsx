@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
@@ -19,10 +19,17 @@ export default function InicioScreen() {
   const loadHome = useCallback(() => api.getMe<HomeData>(), []);
   const loadPromos = useCallback(() => api.getPromotions<Array<{ id: string; title: string; description: string; image_url?: string | null; discount_percentage: number | null; workshop: { trade_name: string } }>>(), []);
 
-  const { data, loading, error } = useApiResource(loadHome);
-  const { data: promotions } = useApiResource(loadPromos);
+  const { data, loading, error, reload: reloadHome } = useApiResource(loadHome);
+  const { data: promotions, reload: reloadPromos } = useApiResource(loadPromos);
+  const [refreshing, setRefreshing] = useState(false);
 
-  if (loading) return <SafeAreaView style={styles.container}><ActivityIndicator style={{ marginTop: 48 }} /></SafeAreaView>;
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.allSettled([reloadHome(), reloadPromos()]);
+    setRefreshing(false);
+  }, [reloadHome, reloadPromos]);
+
+  if (loading && !refreshing) return <SafeAreaView style={styles.container}><ActivityIndicator style={{ marginTop: 48 }} /></SafeAreaView>;
   if (error || !data) return <SafeAreaView style={styles.container}><Text style={{ padding: 20, color: tokens.colors.status.danger }}>{error ?? "Dados indisponíveis"}</Text></SafeAreaView>;
   const subscription = data.subscriptions?.[0];
   const vehicle = data.vehicles?.[0];
@@ -30,9 +37,20 @@ export default function InicioScreen() {
   const unit = workshop?.organization_units?.[0];
   const workshopProfile = workshop?.workshop_profiles;
 
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[tokens.colors.brand.primary]}
+            tintColor={tokens.colors.brand.primary}
+          />
+        }
+      >
         {/* Topo / Boas-vindas */}
         <View style={styles.header}>
           <View>
@@ -74,16 +92,20 @@ export default function InicioScreen() {
                   activeOpacity={0.85}
                   onPress={() => router.push("/(app)/promocoes")}
                 >
-                  {p.image_url ? (
-                    <View style={styles.promoHomeImageContainer}>
+                  <View style={styles.promoHomeImageContainer}>
+                    {p.image_url ? (
                       <Image source={{ uri: p.image_url }} style={styles.promoHomeImage} resizeMode="cover" />
-                      {p.discount_percentage ? (
-                        <View style={styles.promoHomeBadge}>
-                          <Text style={styles.promoHomeBadgeText}>{p.discount_percentage}% OFF</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                  ) : null}
+                    ) : (
+                      <View style={styles.promoHomePlaceholder}>
+                        <Text style={{ fontSize: 24 }}>🏷️</Text>
+                      </View>
+                    )}
+                    {p.discount_percentage ? (
+                      <View style={styles.promoHomeBadge}>
+                        <Text style={styles.promoHomeBadgeText}>{p.discount_percentage}% OFF</Text>
+                      </View>
+                    ) : null}
+                  </View>
                   <View style={{ padding: 12 }}>
                     <Text style={styles.promoHomeWorkshop} numberOfLines={1}>
                       {p.workshop?.trade_name ?? "Oficina Credenciada"}
@@ -202,7 +224,7 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   promoHomeCard: {
-    width: 220,
+    width: 240,
     backgroundColor: tokens.colors.surface.default,
     borderRadius: 16,
     overflow: "hidden",
@@ -216,14 +238,23 @@ const styles = StyleSheet.create({
   },
   promoHomeImageContainer: {
     width: "100%",
-    height: 110,
+    aspectRatio: 16 / 9,
     backgroundColor: tokens.colors.surface.subtle,
-    position: "relative"
+    position: "relative",
+    overflow: "hidden"
   },
   promoHomeImage: {
     width: "100%",
     height: "100%"
   },
+  promoHomePlaceholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
   promoHomeBadge: {
     position: "absolute",
     top: 8,

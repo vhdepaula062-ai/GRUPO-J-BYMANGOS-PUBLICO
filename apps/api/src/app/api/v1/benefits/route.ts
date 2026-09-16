@@ -3,6 +3,7 @@ import { authenticateRequest, getCustomerId, isAuthFailure } from "@/lib/auth";
 import { createProblemResponse, createSuccessResponse } from "@/lib/response";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request); if (isAuthFailure(auth)) return auth;
   const customerId = await getCustomerId(auth.db, auth.user.id);

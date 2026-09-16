@@ -28,37 +28,86 @@ export async function createNetworkPromotion(input: {
   title: string;
   description: string;
   workshopName: string;
+  imageUrl?: string;
+  discountPercentage?: number;
 }) {
   const supabase = createServerSupabaseClient();
-  const { data: workshop, error: workshopError } = await supabase
-    .from("organizations")
-    .select("id")
-    .ilike("trade_name", input.workshopName.trim())
-    .eq("status", "active")
-    .limit(1)
-    .maybeSingle();
+  let workshopId: string | null = null;
 
-  if (workshopError || !workshop) {
-    throw new Error("Informe o nome exato de uma oficina ativa da rede.");
+  if (input.workshopName && input.workshopName.trim()) {
+    const { data: workshop } = await supabase
+      .from("organizations")
+      .select("id")
+      .ilike("trade_name", `%${input.workshopName.trim()}%`)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    if (workshop) {
+      workshopId = workshop.id;
+    }
+  }
+
+  // Se não encontrar pelo nome, usa a primeira oficina ativa da rede como âncora
+  if (!workshopId) {
+    const { data: fallbackWorkshop } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    if (fallbackWorkshop) {
+      workshopId = fallbackWorkshop.id;
+    } else {
+      throw new Error("Nenhuma oficina ativa encontrada na rede para ancorar a promoção.");
+    }
   }
 
   const start = new Date();
   const end = new Date(start);
   end.setDate(end.getDate() + 30);
-  const { data, error } = await supabase
+
+  const fullDescription = input.imageUrl
+    ? `${input.description}\n<!--image_url:${input.imageUrl}-->`
+    : input.description;
+
+  const payload: Record<string, any> = {
+    workshop_id: workshopId,
+    title: input.title,
+    description: fullDescription,
+    discount_percentage: input.discountPercentage ?? null,
+    start_date: start.toISOString().slice(0, 10),
+    end_date: end.toISOString().slice(0, 10),
+    status: "active",
+    moderation_notes: input.imageUrl || null
+  };
+
+  let { data, error } = await supabase
     .from("promotions")
     .insert({
-      workshop_id: workshop.id,
-      title: input.title,
-      description: input.description,
-      start_date: start.toISOString().slice(0, 10),
-      end_date: end.toISOString().slice(0, 10),
-      status: "active"
+      ...payload,
+      image_url: input.imageUrl || null
     })
     .select("id, title, description, status, created_at")
     .single();
 
-  if (error) throw new Error(`Falha ao publicar promoção: ${error.message}`);
+  if (error && error.message?.includes("image_url")) {
+    const retry = await supabase
+      .from("promotions")
+      .insert(payload)
+      .select("id, title, description, status, created_at")
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
+
+  if (error || !data) {
+    console.error("[createNetworkPromotion] Error:", error?.message);
+    throw new Error(`Falha ao publicar promoção: ${error?.message}`);
+  }
+
   revalidatePath("/promocoes");
-  return data;
+  revalidatePath("/dashboard");
+  return { success: true, promotion: data };
 }

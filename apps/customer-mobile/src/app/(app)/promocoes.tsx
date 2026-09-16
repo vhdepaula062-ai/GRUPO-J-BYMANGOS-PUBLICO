@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
@@ -19,22 +19,49 @@ type Promotion = {
 
 export default function PromocoesScreen() {
   const load = useCallback(() => api.getPromotions<Promotion[]>(), []);
-  const { data, loading, error } = useApiResource(load);
+  const { data, loading, error, reload } = useApiResource(load);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }, [reload]);
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[tokens.colors.brand.primary]}
+            tintColor={tokens.colors.brand.primary}
+          />
+        }
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Ofertas e Promoções</Text>
           <Text style={styles.subtitle}>Descontos exclusivos oferecidos pelas oficinas credenciadas</Text>
         </View>
-        {loading ? <ActivityIndicator /> : null}
+        {loading && !refreshing ? <ActivityIndicator /> : null}
         {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
         {!loading && !error && data?.length === 0 ? <Text style={styles.subtitle}>Nenhuma promoção ativa no momento.</Text> : null}
         {(data ?? []).map((promotion) => (
           <MobileCard key={promotion.id} style={styles.card}>
-            {promotion.image_url ? (
-              <Image source={{ uri: promotion.image_url }} style={styles.promoImage} resizeMode="cover" />
-            ) : null}
+            <View style={styles.imageFrame}>
+              {promotion.image_url ? (
+                <Image source={{ uri: promotion.image_url }} style={styles.promoImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.placeholderFrame}>
+                  <Text style={{ fontSize: 32 }}>🚗</Text>
+                  <Text style={{ fontSize: 11, color: tokens.colors.text.muted, marginTop: 4, fontWeight: "600" }}>
+                    Oferta Homologada Grupo J
+                  </Text>
+                </View>
+              )}
+            </View>
             <View style={styles.cardContent}>
               <View style={styles.promoHeader}>
                 <Text style={styles.workshopName}>{promotion.workshop?.trade_name ?? "Oficina credenciada"}</Text>
@@ -58,7 +85,23 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "800", color: tokens.colors.text.primary },
   subtitle: { fontSize: 13, color: tokens.colors.text.secondary, marginTop: 2 },
   card: { padding: 0, overflow: "hidden", marginBottom: 16 },
-  promoImage: { width: "100%", height: 140, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
+  imageFrame: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#F1F5F9",
+    overflow: "hidden"
+  },
+  promoImage: {
+    width: "100%",
+    height: "100%"
+  },
+  placeholderFrame: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8FAFC"
+  },
   cardContent: { padding: 16 },
   promoHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   workshopName: { fontSize: 12, fontWeight: "700", color: tokens.colors.brand.primary, textTransform: "uppercase" },
@@ -66,3 +109,4 @@ const styles = StyleSheet.create({
   promoDesc: { fontSize: 13, color: tokens.colors.text.secondary, marginTop: 4, lineHeight: 18 },
   promoValid: { fontSize: 11, color: tokens.colors.text.muted, marginTop: 8 }
 });
+

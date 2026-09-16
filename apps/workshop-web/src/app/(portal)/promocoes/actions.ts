@@ -20,16 +20,30 @@ export async function createWorkshopPromotionAction(data: {
   const startDate = new Date();
   const endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 30);
 
-  const { error } = await supabase.from("promotions").insert({
+  const fullDescription = data.imageUrl
+    ? `${data.description}\n<!--image_url:${data.imageUrl}-->`
+    : data.description;
+
+  const payload: Record<string, any> = {
     workshop_id: workshopId,
     title: data.title,
-    description: data.description,
-    image_url: data.imageUrl || null,
+    description: fullDescription,
     discount_percentage: data.discountPercentage ?? null,
     start_date: startDate.toISOString().slice(0, 10),
     end_date: endDate.toISOString().slice(0, 10),
-    status: "pending_approval"
+    status: "pending_approval",
+    moderation_notes: data.imageUrl || null
+  };
+
+  let { error } = await supabase.from("promotions").insert({
+    ...payload,
+    image_url: data.imageUrl || null
   });
+
+  if (error && error.message?.includes("image_url")) {
+    const retry = await supabase.from("promotions").insert(payload);
+    error = retry.error;
+  }
 
   if (error) {
     console.error("[createWorkshopPromotionAction]", error.message);

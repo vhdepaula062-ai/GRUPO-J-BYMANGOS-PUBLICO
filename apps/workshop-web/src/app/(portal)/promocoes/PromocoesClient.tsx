@@ -19,13 +19,37 @@ export function PromocoesClient({ promotions }: Props) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const [discountPercentage, setDiscountPercentage] = useState<number | "">("");
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("A imagem selecionada deve ter no máximo 5MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setImageUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreatePromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description) return;
 
     startTransition(async () => {
       try {
-        await createWorkshopPromotionAction({ title, description, imageUrl });
+        await createWorkshopPromotionAction({
+          title,
+          description,
+          imageUrl,
+          discountPercentage: discountPercentage ? Number(discountPercentage) : undefined
+        });
       } catch (err: unknown) {
         setFeedback(err instanceof Error ? err.message : "Falha ao cadastrar a promoção.");
         return;
@@ -45,6 +69,7 @@ export function PromocoesClient({ promotions }: Props) {
       setTitle("");
       setDescription("");
       setImageUrl("");
+      setDiscountPercentage("");
       setFeedback("Promoção submetida para aprovação com sucesso! Nossa equipe avaliará em até 4 horas.");
       setTimeout(() => setFeedback(null), 4000);
     });
@@ -169,7 +194,7 @@ export function PromocoesClient({ promotions }: Props) {
             <form onSubmit={handleCreatePromo} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Título da Oferta
+                  Título da Oferta *
                 </label>
                 <input
                   type="text"
@@ -181,48 +206,137 @@ export function PromocoesClient({ promotions }: Props) {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Desconto (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="Ex: 20"
+                    value={discountPercentage}
+                    onChange={(e) => setDiscountPercentage(e.target.value ? Number(e.target.value) : "")}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Enquadramento
+                  </label>
+                  <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 text-center">
+                    ✓ Proporção 16:9 (Mobile)
+                  </div>
+                </div>
+              </div>
+
+              {/* Seletor de Imagem com Enquadramento 16:9 */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Foto ou Banner da Promoção (URL da Imagem)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Foto ou Banner da Promoção *
+                  </label>
+                  <span className="text-[11px] font-medium text-slate-500">
+                    Proporção ideal: 16:9 (ex: 800 × 450 px)
+                  </span>
+                </div>
+
                 <input
-                  type="url"
-                  placeholder="https://exemplo.com/foto-promocao.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/*"
+                  className="hidden"
                 />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setImageUrl("https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&q=80")}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
+
+                {imageUrl ? (
+                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-emerald-400 bg-slate-900 group shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="Preview da promoção"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex flex-col justify-between p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-500 text-white shadow">
+                          ✓ Enquadramento 16:9 Seguro
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl("")}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white font-semibold transition shadow"
+                        >
+                          ✕ Remover foto
+                        </button>
+                      </div>
+                      <p className="text-white text-xs font-bold truncate">
+                        Visualização idêntica à do aplicativo móvel
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-video w-full rounded-2xl border-2 border-dashed border-slate-300 hover:border-[#034EFE] bg-slate-50 hover:bg-blue-50/40 cursor-pointer flex flex-col items-center justify-center p-4 transition text-center group"
                   >
-                    Auto Center
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImageUrl("https://images.unsplash.com/photo-1578844251758-2f71da64c96f?w=800&q=80")}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
-                  >
-                    Pneus & Rodas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImageUrl("https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&q=80")}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
-                  >
-                    Freios & Mecânica
-                  </button>
+                    <div className="w-10 h-10 rounded-full bg-blue-100/70 text-[#034EFE] flex items-center justify-center text-lg mb-2 group-hover:scale-110 transition-transform">
+                      📷
+                    </div>
+                    <p className="text-xs font-bold text-slate-700">
+                      Clique para escolher imagem do computador
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      JPG, PNG ou WEBP (Proporção 16:9 recomendada • máx. 5MB)
+                    </p>
+                  </div>
+                )}
+
+                {/* Modelos rápidos automotivos 16:9 */}
+                <div className="mt-2">
+                  <p className="text-[11px] font-semibold text-slate-500 mb-1.5">
+                    Ou selecione um modelo fotográfico em 16:9:
+                  </p>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl("https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Oficina Mecânica
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl("https://images.unsplash.com/photo-1578844251758-2f71da64c96f?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Pneus & Rodas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl("https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Freios & Suspensão
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl("https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80")}
+                      className="text-[10px] py-1 px-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 font-medium transition text-center truncate"
+                    >
+                      Climatização A/C
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Descrição & Condições
+                  Descrição & Condições *
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Detalhes para o motorista, peças incluídas e restrições..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}

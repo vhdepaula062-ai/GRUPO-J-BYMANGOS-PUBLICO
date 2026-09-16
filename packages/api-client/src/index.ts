@@ -29,6 +29,8 @@ export class ApiClient {
     const headers = new Headers(options.headers || {});
 
     headers.set("Accept", "application/json");
+    headers.set("Cache-Control", "no-cache");
+    headers.set("Pragma", "no-cache");
     if (!headers.has("Content-Type") && options.body) {
       headers.set("Content-Type", "application/json");
     }

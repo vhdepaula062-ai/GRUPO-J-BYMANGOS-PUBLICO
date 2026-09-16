@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
@@ -15,6 +15,14 @@ export default function OficinasScreen() {
     return { data: { workshops: workshops.data, me: me.data } };
   }, []);
   const { data, loading, error, reload } = useApiResource(load);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await reload();
+    setRefreshing(false);
+  }, [reload]);
+
   const nextAllowed = data?.me.next_workshop_change_allowed_at ? new Date(data.me.next_workshop_change_allowed_at) : null;
   const daysRemainingForChange = nextAllowed && nextAllowed > new Date() ? Math.ceil((nextAllowed.getTime() - Date.now()) / 86400000) : 0;
   const current = data?.workshops.find((item) => item.id === data.me.assigned_workshop_id);
@@ -26,7 +34,18 @@ export default function OficinasScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[tokens.colors.brand.primary]}
+            tintColor={tokens.colors.brand.primary}
+          />
+        }
+      >
+
         <View style={styles.header}>
           <Text style={styles.title}>Centros Automotivos Credenciados</Text>
           <Text style={styles.subtitle}>
