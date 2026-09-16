@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { Button, Badge, Clock, CheckCircle2, Gift, X } from "@grupo-j/ui-web";
+import { Button, Badge, Clock, CheckCircle2, XCircle, Gift, X } from "@grupo-j/ui-web";
 import { createWorkshopPromotionAction } from "./actions";
 import { formatDate } from "@/lib/format";
 import type { PromotionRow } from "@/lib/queries";
@@ -16,7 +16,7 @@ export function PromocoesClient({ promotions }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [discountPercentage, setDiscountPercentage] = useState<number | "">("");
@@ -25,14 +25,10 @@ export function PromocoesClient({ promotions }: Props) {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("A imagem selecionada deve ter no máximo 5MB.");
-      return;
-    }
     const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setImageUrl(reader.result);
+    reader.onload = (event) => {
+      if (typeof event.target?.result === "string") {
+        setImageUrl(event.target.result);
       }
     };
     reader.readAsDataURL(file);
@@ -40,18 +36,22 @@ export function PromocoesClient({ promotions }: Props) {
 
   const handleCreatePromo = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !description) return;
+    if (!title.trim()) return;
 
     startTransition(async () => {
       try {
-        await createWorkshopPromotionAction({
+        const result = await createWorkshopPromotionAction({
           title,
           description,
           imageUrl,
           discountPercentage: discountPercentage ? Number(discountPercentage) : undefined
         });
+        if (!result.success) {
+          setFeedback({ type: "error", message: result.error || "Falha ao cadastrar a promoção." });
+          return;
+        }
       } catch (err: unknown) {
-        setFeedback(err instanceof Error ? err.message : "Falha ao cadastrar a promoção.");
+        setFeedback({ type: "error", message: err instanceof Error ? err.message : "Falha ao cadastrar a promoção." });
         return;
       }
 
@@ -70,7 +70,10 @@ export function PromocoesClient({ promotions }: Props) {
       setDescription("");
       setImageUrl("");
       setDiscountPercentage("");
-      setFeedback("Promoção submetida para aprovação com sucesso! Nossa equipe avaliará em até 4 horas.");
+      setFeedback({
+        type: "success",
+        message: "Promoção submetida para aprovação com sucesso! Nossa equipe avaliará em até 4 horas."
+      });
       setTimeout(() => setFeedback(null), 4000);
     });
   };
@@ -95,9 +98,19 @@ export function PromocoesClient({ promotions }: Props) {
       </div>
 
       {feedback && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-3 text-xs font-semibold animate-in fade-in">
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{feedback}</span>
+        <div
+          className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold animate-in fade-in ${
+            feedback.type === "error"
+              ? "bg-rose-50 border border-rose-200 text-rose-800"
+              : "bg-emerald-50 border border-emerald-200 text-emerald-800"
+          }`}
+        >
+          {feedback.type === "error" ? (
+            <XCircle size={16} className="text-rose-600 shrink-0" />
+          ) : (
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+          )}
+          <span>{feedback.message}</span>
         </div>
       )}
 

@@ -12,7 +12,7 @@ interface Props {
 
 export function PromocoesModerator({ promotions: initialPromos }: Props) {
   const [promos, setPromos] = useState<PromotionRow[]>(initialPromos);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Modal de Criação de Promoção Admin
@@ -27,14 +27,10 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("A imagem selecionada deve ter no máximo 5MB.");
-      return;
-    }
     const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setNewImageUrl(reader.result);
+    reader.onload = (event) => {
+      if (typeof event.target?.result === "string") {
+        setNewImageUrl(event.target.result);
       }
     };
     reader.readAsDataURL(file);
@@ -43,20 +39,25 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
   const handleModerate = (id: string, newStatus: "approved" | "rejected") => {
     startTransition(async () => {
       try {
-        await updatePromotionStatus(id, newStatus);
+        const result = await updatePromotionStatus(id, newStatus);
+        if (!result.success) {
+          setFeedback({ type: "error", message: result.error || "Falha ao moderar a promoção." });
+          return;
+        }
+        setPromos((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, status: newStatus === "approved" ? "active" : "rejected" } : p))
+        );
+        setFeedback({
+          type: "success",
+          message:
+            newStatus === "approved"
+              ? "Promoção aprovada e publicada para os motoristas no app!"
+              : "Promoção rejeitada."
+        });
+        setTimeout(() => setFeedback(null), 4000);
       } catch (err: unknown) {
-        setFeedback(err instanceof Error ? err.message : "Falha ao moderar a promoção.");
-        return;
+        setFeedback({ type: "error", message: err instanceof Error ? err.message : "Falha ao moderar a promoção." });
       }
-      setPromos((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p))
-      );
-      setFeedback(
-        newStatus === "approved"
-          ? "Promoção aprovada e publicada para os motoristas no app!"
-          : "Promoção rejeitada."
-      );
-      setTimeout(() => setFeedback(null), 4000);
     });
   };
 
@@ -72,6 +73,10 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
           imageUrl: newImageUrl,
           discountPercentage: newDiscount ? Number(newDiscount) : undefined
         });
+        if (!result.success) {
+          setFeedback({ type: "error", message: result.error || "Falha ao publicar a promoção." });
+          return;
+        }
         const createdPromo: PromotionRow = {
           id: result.promotion?.id || `promo-admin-${Date.now()}`,
           title: newTitle,
@@ -86,10 +91,10 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
         setNewDescription("");
         setNewImageUrl("");
         setNewDiscount("");
-        setFeedback("Nova campanha promocional criada e publicada com sucesso!");
+        setFeedback({ type: "success", message: "Nova campanha promocional criada e publicada com sucesso!" });
         setTimeout(() => setFeedback(null), 4000);
       } catch (err: unknown) {
-        setFeedback(err instanceof Error ? err.message : "Falha ao publicar a promoção.");
+        setFeedback({ type: "error", message: err instanceof Error ? err.message : "Falha ao publicar a promoção." });
       }
     });
   };
@@ -120,9 +125,19 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
       </div>
 
       {feedback && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-3 text-xs font-semibold animate-in fade-in">
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{feedback}</span>
+        <div
+          className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold animate-in fade-in ${
+            feedback.type === "error"
+              ? "bg-rose-50 border border-rose-200 text-rose-800"
+              : "bg-emerald-50 border border-emerald-200 text-emerald-800"
+          }`}
+        >
+          {feedback.type === "error" ? (
+            <XCircle size={16} className="text-rose-600 shrink-0" />
+          ) : (
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+          )}
+          <span>{feedback.message}</span>
         </div>
       )}
 

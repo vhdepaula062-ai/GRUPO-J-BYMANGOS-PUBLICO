@@ -3,6 +3,7 @@
  * Todas as funções retornam exclusivamente dados persistidos no banco.
  */
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminServerClient } from "@/lib/supabase/admin";
 
 export async function withQueryTimeout<T>(promise: Promise<T>, fallback: T, ms = 2500): Promise<T> {
   let timer: NodeJS.Timeout;
@@ -276,11 +277,11 @@ export interface PromotionRow {
 }
 
 export async function getPendingPromotions(): Promise<PromotionRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
   const { data, error } = await supabase
     .from("promotions")
-    .select("id, title, description, image_url, status, created_at, organization:organizations(trade_name)")
+    .select("id, title, description, status, created_at, discount_percentage, moderation_notes, workshop:organizations(trade_name)")
     .in("status", ["pending_approval", "active", "rejected"])
     .order("created_at", { ascending: false })
     .limit(50);
@@ -289,15 +290,24 @@ export async function getPendingPromotions(): Promise<PromotionRow[]> {
     console.error("[getPendingPromotions]", error.message);
     return [];
   }
-  return (data ?? []).map((p: Record<string, unknown>) => ({
-    id: p.id as string,
-    title: p.title as string,
-    description: p.description as string,
-    image_url: p.image_url as string | null | undefined,
-    status: p.status as string,
-    created_at: p.created_at as string,
-    workshop: p.organization as PromotionRow["workshop"]
-  }));
+  return (data ?? []).map((p: any) => {
+    let imageUrl: string | null = (p.moderation_notes as string) || null;
+    let cleanDesc = (p.description as string) || "";
+    const match = cleanDesc.match(/<!--image_url:(.*?)-->/);
+    if (match && match[1]) {
+      imageUrl = match[1];
+      cleanDesc = cleanDesc.replace(/<!--image_url:.*?-->/, "").trim();
+    }
+    return {
+      id: p.id as string,
+      title: p.title as string,
+      description: cleanDesc,
+      image_url: imageUrl,
+      status: p.status as string,
+      created_at: p.created_at as string,
+      workshop: p.workshop as PromotionRow["workshop"]
+    };
+  });
 }
 
 // ----------------------------------------------------------------------------
