@@ -206,7 +206,7 @@ export function AgendaClient() {
 
               {apt.notes ? (
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 italic">
-                  "{apt.notes}"
+                  &ldquo;{apt.notes}&rdquo;
                 </div>
               ) : null}
             </CardContent>
