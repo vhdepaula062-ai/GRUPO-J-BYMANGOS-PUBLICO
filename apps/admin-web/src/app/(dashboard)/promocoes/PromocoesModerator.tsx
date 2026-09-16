@@ -155,6 +155,11 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
                   key={promo.id}
                   className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between gap-4 hover:border-slate-300 transition-colors"
                 >
+                  {promo.image_url && (
+                    <div className="relative h-40 w-full rounded-xl overflow-hidden bg-slate-100">
+                      <img src={promo.image_url} alt={promo.title} className="w-full h-full object-cover" />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">

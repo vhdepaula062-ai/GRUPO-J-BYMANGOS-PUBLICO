@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 export async function createWorkshopPromotionAction(data: {
   title: string;
   description: string;
+  imageUrl?: string;
   discountPercentage?: number;
 }) {
   const workshopData = await getMyWorkshop();
@@ -23,6 +24,7 @@ export async function createWorkshopPromotionAction(data: {
     workshop_id: workshopId,
     title: data.title,
     description: data.description,
+    image_url: data.imageUrl || null,
     discount_percentage: data.discountPercentage ?? null,
     start_date: startDate.toISOString().slice(0, 10),
     end_date: endDate.toISOString().slice(0, 10),

@@ -269,6 +269,7 @@ export interface PromotionRow {
   id: string;
   title: string;
   description: string;
+  image_url?: string | null;
   status: string;
   created_at: string;
   workshop?: { trade_name: string };
@@ -279,7 +280,7 @@ export async function getPendingPromotions(): Promise<PromotionRow[]> {
 
   const { data, error } = await supabase
     .from("promotions")
-    .select("id, title, description, status, created_at, organization:organizations(trade_name)")
+    .select("id, title, description, image_url, status, created_at, organization:organizations(trade_name)")
     .in("status", ["pending_approval", "active", "rejected"])
     .order("created_at", { ascending: false })
     .limit(50);
@@ -292,9 +293,10 @@ export async function getPendingPromotions(): Promise<PromotionRow[]> {
     id: p.id as string,
     title: p.title as string,
     description: p.description as string,
+    image_url: p.image_url as string | null | undefined,
     status: p.status as string,
     created_at: p.created_at as string,
-    workshop: p.organization as { trade_name: string } | undefined
+    workshop: p.organization as PromotionRow["workshop"]
   }));
 }
 

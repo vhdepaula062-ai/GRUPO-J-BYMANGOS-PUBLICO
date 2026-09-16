@@ -239,21 +239,21 @@ export default function WorkshopLandingPage() {
                 <CarHeroGraphic size={250} />
               </div>
 
-              {/* Tag Flutuante 1 (Alinhamento) em Vidro Fosco */}
+              {/* Tag Flutuante 1 (Alinhamento & Convergência) */}
               <div
-                className={`absolute -top-3 right-4 glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-slate-800 flex items-center gap-2.5 whitespace-nowrap z-20 transition-transform duration-300 hover:scale-105 ${
+                className={`absolute -top-4 left-2 sm:-left-4 glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-slate-800 flex items-center gap-2.5 whitespace-nowrap z-20 transition-transform duration-300 hover:scale-105 ${
                   isTabVisible ? "animate-float-tag-1" : ""
                 }`}
               >
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>
-                  Alinhamento <span className="text-slate-400 font-normal">(Incluso)</span>
+                  Alinhamento (Convergência) <span className="text-slate-400 font-normal">(Incluso)</span>
                 </span>
               </div>
 
-              {/* Tag Flutuante 2 (Balanceamento) em Vidro Fosco */}
+              {/* Tag Flutuante 2 (Balanceamento) */}
               <div
-                className={`absolute top-[40%] -right-10 sm:-right-14 glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-slate-800 flex items-center gap-2.5 whitespace-nowrap z-20 transition-transform duration-300 hover:scale-105 ${
+                className={`absolute top-6 -right-6 sm:-right-12 glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-slate-800 flex items-center gap-2.5 whitespace-nowrap z-20 transition-transform duration-300 hover:scale-105 ${
                   isTabVisible ? "animate-float-tag-2" : ""
                 }`}
               >
@@ -263,15 +263,27 @@ export default function WorkshopLandingPage() {
                 </span>
               </div>
 
-              {/* Tag Flutuante 3 (Higienização A/C) em Vidro Fosco */}
+              {/* Tag Flutuante 3 (Higienização A/C) */}
               <div
-                className={`absolute -bottom-3 left-4 glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-slate-800 flex items-center gap-2.5 whitespace-nowrap z-20 transition-transform duration-300 hover:scale-105 ${
+                className={`absolute -bottom-4 left-2 sm:left-4 glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-slate-800 flex items-center gap-2.5 whitespace-nowrap z-20 transition-transform duration-300 hover:scale-105 ${
                   isTabVisible ? "animate-float-tag-3" : ""
                 }`}
               >
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>
                   Higienização A/C <span className="text-slate-400 font-normal">(Incluso)</span>
+                </span>
+              </div>
+
+              {/* Tag Flutuante 4 (Rodízio de Pneus) */}
+              <div
+                className={`absolute bottom-8 -right-6 sm:-right-10 glass-pill px-4 py-2 rounded-2xl text-xs font-semibold text-slate-800 flex items-center gap-2.5 whitespace-nowrap z-20 transition-transform duration-300 hover:scale-105 ${
+                  isTabVisible ? "animate-float-tag-1" : ""
+                }`}
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>
+                  Rodízio de Pneus <span className="text-slate-400 font-normal">(Incluso)</span>
                 </span>
               </div>
             </div>
@@ -408,7 +420,7 @@ export default function WorkshopLandingPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={18} className="text-[#034EFE]" />
-                    <span>Alinhamento e convergência</span>
+                    <span>Alinhamento (convergência)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={18} className="text-[#034EFE]" />

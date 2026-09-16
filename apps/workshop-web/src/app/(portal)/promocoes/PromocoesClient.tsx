@@ -15,6 +15,7 @@ export function PromocoesClient({ promotions }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -24,7 +25,7 @@ export function PromocoesClient({ promotions }: Props) {
 
     startTransition(async () => {
       try {
-        await createWorkshopPromotionAction({ title, description });
+        await createWorkshopPromotionAction({ title, description, imageUrl });
       } catch (err: unknown) {
         setFeedback(err instanceof Error ? err.message : "Falha ao cadastrar a promoção.");
         return;
@@ -34,6 +35,7 @@ export function PromocoesClient({ promotions }: Props) {
         id: `promo-ws-${Date.now()}`,
         title,
         description,
+        image_url: imageUrl || null,
         status: "pending_approval",
         created_at: new Date().toISOString()
       };
@@ -42,6 +44,7 @@ export function PromocoesClient({ promotions }: Props) {
       setIsModalOpen(false);
       setTitle("");
       setDescription("");
+      setImageUrl("");
       setFeedback("Promoção submetida para aprovação com sucesso! Nossa equipe avaliará em até 4 horas.");
       setTimeout(() => setFeedback(null), 4000);
     });
@@ -105,6 +108,11 @@ export function PromocoesClient({ promotions }: Props) {
                 key={p.id}
                 className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
+                {p.image_url && (
+                  <div className="relative h-36 w-full rounded-xl overflow-hidden mb-3 bg-slate-100">
+                    <img src={p.image_url} alt={p.title} className="w-full h-full object-cover" />
+                  </div>
+                )}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-400">
@@ -147,7 +155,7 @@ export function PromocoesClient({ promotions }: Props) {
               <div>
                 <h3 className="text-xl font-extrabold text-slate-900">Nova Oferta ou Cortesia</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Submeta uma promoção para validação do Grupo J antes de publicar.
+                  Submeta uma promoção com foto para validação do Grupo J antes de publicar.
                 </p>
               </div>
               <button
@@ -171,6 +179,42 @@ export function PromocoesClient({ promotions }: Props) {
                   className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Foto ou Banner da Promoção (URL da Imagem)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://exemplo.com/foto-promocao.jpg"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
+                />
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=800&q=80")}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
+                  >
+                    Auto Center
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("https://images.unsplash.com/photo-1578844251758-2f71da64c96f?w=800&q=80")}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
+                  >
+                    Pneus & Rodas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&q=80")}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors"
+                  >
+                    Freios & Mecânica
+                  </button>
+                </div>
               </div>
 
               <div>

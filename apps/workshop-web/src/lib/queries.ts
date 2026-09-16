@@ -168,6 +168,7 @@ export interface PromotionRow {
   id: string;
   title: string;
   description: string;
+  image_url?: string | null;
   status: string;
   created_at: string;
   valid_from?: string;
@@ -179,7 +180,7 @@ export async function getWorkshopPromotions(workshopId: string): Promise<Promoti
 
   const { data, error } = await supabase
     .from("promotions")
-    .select("id, title, description, status, created_at, start_date, end_date")
+    .select("id, title, description, image_url, status, created_at, start_date, end_date")
     .eq("workshop_id", workshopId)
     .order("created_at", { ascending: false });
 
