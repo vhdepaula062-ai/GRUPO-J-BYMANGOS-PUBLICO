@@ -80,22 +80,32 @@ export default function OficinasScreen() {
         </MobileCard> : <Text style={styles.subtitle}>Nenhuma oficina vinculada.</Text>}
 
         <Text style={styles.sectionTitle}>Outras Oficinas na Rede</Text>
-        {(data?.workshops ?? []).filter((item) => item.id !== current?.id).map((workshop) => <MobileCard key={workshop.id}>
-          <View style={styles.workshopItem}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.workshopName}>{workshop.trade_name}</Text>
-              <Text style={styles.workshopAddress}>{workshop.organization_units?.[0] ? `${workshop.organization_units[0].address_street}, ${workshop.organization_units[0].address_number} — ${workshop.organization_units[0].address_neighborhood}` : "Endereço não informado"}</Text>
-              <Text style={styles.workshopRating}>★ {workshop.workshop_profiles?.rating_average ?? "—"}</Text>
-            </View>
-            <MobileButton
-              label="Selecionar"
-              size="sm"
-              variant="outline"
-              disabled={daysRemainingForChange > 0}
-              onPress={() => void selectWorkshop(workshop.id)}
-            />
-          </View>
-        </MobileCard>)}
+        {(data?.workshops ?? []).filter((item) => item.id !== current?.id).length === 0 ? (
+          <Text style={styles.subtitle}>Nenhum outro centro credenciado disponível no momento.</Text>
+        ) : (
+          (data?.workshops ?? []).filter((item) => item.id !== current?.id).map((workshop) => (
+            <MobileCard key={workshop.id}>
+              <View style={styles.workshopItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.workshopName}>{workshop.trade_name}</Text>
+                  <Text style={styles.workshopAddress}>
+                    {workshop.organization_units?.[0]
+                      ? `${workshop.organization_units[0].address_street}, ${workshop.organization_units[0].address_number} — ${workshop.organization_units[0].address_neighborhood}`
+                      : "Endereço não informado"}
+                  </Text>
+                  <Text style={styles.workshopRating}>★ {workshop.workshop_profiles?.rating_average ?? "—"}</Text>
+                </View>
+                <MobileButton
+                  label="Selecionar"
+                  size="sm"
+                  variant="outline"
+                  disabled={daysRemainingForChange > 0}
+                  onPress={() => void selectWorkshop(workshop.id)}
+                />
+              </View>
+            </MobileCard>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );

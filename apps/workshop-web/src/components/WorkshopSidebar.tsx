@@ -33,7 +33,11 @@ const workshopNav = [
   { name: "Suporte Grupo J", href: "/suporte", icon: <HelpCircle size={18} /> }
 ];
 
-export const WorkshopSidebar: React.FC = () => {
+export const WorkshopSidebar: React.FC<{
+  workshopName?: string;
+}> = ({
+  workshopName = "Oficina Parceira"
+}) => {
   const pathname = usePathname();
 
   return (
@@ -90,9 +94,9 @@ export const WorkshopSidebar: React.FC = () => {
       {/* Perfil da Oficina no Rodapé */}
       <div className="p-3 border-t border-[#13254A] bg-[#020713]">
         <div className="flex items-center gap-3 p-1.5 rounded-xl">
-          <Avatar name="Auto Center Barra" size="sm" />
+          <Avatar name={workshopName} size="sm" />
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-xs font-bold text-white truncate">Auto Center Barra</p>
+            <p className="text-xs font-bold text-white truncate">{workshopName}</p>
             <p className="text-[11px] text-emerald-400 truncate">● Credenciada Ativa</p>
           </div>
         </div>

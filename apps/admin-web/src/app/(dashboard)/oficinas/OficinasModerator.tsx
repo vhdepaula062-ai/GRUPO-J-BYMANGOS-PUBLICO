@@ -481,13 +481,30 @@ export function OficinasModerator({ initialWorkshops }: OficinasModeratorProps) 
         <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
           {filteredWorkshops.length === 0 ? (
             <div className="p-12 text-center">
-              <Building2 size={32} className="text-slate-300 mx-auto mb-2" />
-              <h4 className="text-sm font-bold text-slate-800">
-                Nenhuma oficina encontrada nesta categoria
+              <Building2 size={36} className="text-slate-300 mx-auto mb-3" />
+              <h4 className="text-base font-bold text-slate-900">
+                {workshops.length === 0
+                  ? "Nenhuma oficina parceira credenciada ainda"
+                  : "Nenhuma oficina encontrada nesta categoria"}
               </h4>
-              <p className="text-xs text-slate-500 mt-1">
-                Tente ajustar os termos de busca ou clique na aba &ldquo;Aguardando Aprovação&rdquo;.
+              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto leading-relaxed">
+                {workshops.length === 0
+                  ? "O ecossistema está pronto para receber cadastros reais. Cadastre o primeiro centro parceiro pelo botão acima ou aguarde propostas de adesão."
+                  : "Tente ajustar os termos de busca ou clique na aba \"Aguardando Aprovação\"."}
               </p>
+              {workshops.length === 0 && (
+                <div className="mt-4">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setIsModalOpen(true)}
+                    leftIcon={<Plus size={15} />}
+                    className="bg-[#034EFE] text-white shadow-md mx-auto"
+                  >
+                    + Credenciar Primeira Oficina
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">

@@ -36,7 +36,17 @@ const workshopNav = [
   { name: "Suporte Grupo J", href: "/suporte", icon: <HelpCircle size={18} /> }
 ];
 
-export function WorkshopShell({ children }: { children: React.ReactNode }) {
+export function WorkshopShell({
+  children,
+  workshopName = "Oficina Parceira",
+  workshopSubtitle = "Rede Credenciada",
+  locationName = "Rede Credenciada Grupo J"
+}: {
+  children: React.ReactNode;
+  workshopName?: string;
+  workshopSubtitle?: string;
+  locationName?: string;
+}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -95,10 +105,10 @@ export function WorkshopShell({ children }: { children: React.ReactNode }) {
 
         <div className="p-3 border-t border-[#13254A] bg-[#020B1F]">
           <div className="flex items-center gap-3 p-2 rounded-xl bg-[#071739] border border-[#13254A]">
-            <Avatar name="Auto Center Barra" size="sm" />
+            <Avatar name={workshopName} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">Auto Center Barra</p>
-              <p className="text-[10px] text-slate-400 truncate">Oficina Credenciada</p>
+              <p className="text-xs font-bold text-white truncate">{workshopName}</p>
+              <p className="text-[10px] text-slate-400 truncate">{workshopSubtitle}</p>
             </div>
           </div>
         </div>
@@ -184,7 +194,7 @@ export function WorkshopShell({ children }: { children: React.ReactNode }) {
 
       {/* Conteúdo Principal com Barra Superior Responsiva */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC]">
-        <WorkshopNavbar onOpenMobileMenu={() => setMobileMenuOpen(true)} />
+        <WorkshopNavbar onOpenMobileMenu={() => setMobileMenuOpen(true)} locationName={locationName} />
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
           {children}
         </main>

@@ -6,8 +6,10 @@ import { Button, MapPin, Zap, LogOut, Menu, GrupoJLogo } from "@grupo-j/ui-web";
 
 export const WorkshopNavbar: React.FC<{
   onOpenMobileMenu?: () => void;
+  locationName?: string;
 }> = ({
-  onOpenMobileMenu
+  onOpenMobileMenu,
+  locationName = "Rede Credenciada Grupo J"
 }) => {
   return (
     <header className="sticky top-0 z-20 bg-white border-b border-slate-200/80 px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
@@ -27,7 +29,7 @@ export const WorkshopNavbar: React.FC<{
         <div className="hidden lg:flex items-center gap-2 text-xs sm:text-sm text-slate-700">
           <MapPin size={16} className="text-[#034EFE] shrink-0" />
           <span className="font-semibold text-slate-900">Unidade:</span>
-          <span className="text-slate-600 truncate font-medium">Barra da Tijuca — Rio de Janeiro/RJ</span>
+          <span className="text-slate-600 truncate font-medium">{locationName}</span>
         </div>
       </div>
 
