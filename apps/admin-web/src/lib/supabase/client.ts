@@ -1,12 +1,13 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-grupo-j.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Cria um cliente Supabase para uso no lado do CLIENT (Browser Components).
  * Usa o @supabase/ssr que gerencia os cookies da sessão automaticamente.
  */
 export function createClient() {
+  if (!supabaseUrl || !supabaseAnonKey) throw new Error("Supabase não configurado");
   return createBrowserClient(supabaseUrl, supabaseAnonKey);
 }

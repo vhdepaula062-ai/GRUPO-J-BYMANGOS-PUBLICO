@@ -9,7 +9,9 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.startsWith("http") || supabaseUrl.includes("placeholder")) {
-    return supabaseResponse;
+    const isPublic = pathname === "/" || pathname === "/login" || pathname.startsWith("/seja-parceiro") || pathname.startsWith("/api/auth");
+    if (isPublic) return supabaseResponse;
+    return NextResponse.json({ title: "Serviço não configurado", detail: "A autenticação do portal da oficina não está disponível.", status: 503 }, { status: 503 });
   }
 
   try {
@@ -60,7 +62,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   } catch (error) {
     console.error("Workshop middleware error:", error);
-    return supabaseResponse;
+    return NextResponse.redirect(new URL("/login?error=auth_unavailable", request.url));
   }
 }
 

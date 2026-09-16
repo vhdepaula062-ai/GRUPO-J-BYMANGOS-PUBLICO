@@ -1,28 +1,13 @@
 import { NextRequest } from "next/server";
-import { createSuccessResponse } from "@/lib/response";
-import { mockWorkshop } from "@grupo-j/test-utils";
+import { getPublicDatabase } from "@/lib/auth";
+import { createProblemResponse, createSuccessResponse } from "@/lib/response";
 
 export const dynamic = "force-dynamic";
-
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const city = searchParams.get("city");
-
-  const workshops = [
-    mockWorkshop,
-    {
-      ...mockWorkshop,
-      id: "40000000-0000-0000-0000-000000000002",
-      addressStreet: "Avenida das Américas",
-      addressNumber: "18000",
-      addressNeighborhood: "Recreio dos Bandeirantes",
-      ratingAverage: 4.85,
-      ratingCount: 92
-    }
-  ];
-
-  return createSuccessResponse(workshops, 200, {
-    total: workshops.length,
-    filteredByCity: city || "all"
-  });
+  const city = new URL(request.url).searchParams.get("city");
+  let query = getPublicDatabase().from("organizations").select("id, trade_name, email, phone, status, workshop_profiles(description, rating_average, rating_count, operating_hours, is_open_now), organization_units(id, name, address_street, address_number, address_neighborhood, address_city, address_state, address_zip_code, latitude, longitude)").eq("status", "active").order("trade_name");
+  if (city) query = query.eq("organization_units.address_city", city);
+  const { data, error } = await query;
+  if (error) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/query-failed", title: "Oficinas indisponíveis", status: 503, detail: error.message });
+  return createSuccessResponse(data ?? [], 200, { total: data?.length ?? 0 });
 }

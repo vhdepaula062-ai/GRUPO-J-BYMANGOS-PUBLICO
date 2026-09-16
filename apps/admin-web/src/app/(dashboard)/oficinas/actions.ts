@@ -1,8 +1,8 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { updateEcosystemWorkshopStatus, registerPendingWorkshopProposal } from "@grupo-j/database";
 import { revalidatePath } from "next/cache";
+import { createHmac } from "crypto";
 
 export interface ModerateWorkshopResult {
   success: boolean;
@@ -17,9 +17,6 @@ export async function moderateWorkshopAction(
   workshopId: string,
   newStatus: "active" | "inactive" | "suspended" | "pending_approval"
 ): Promise<ModerateWorkshopResult> {
-  // Sincroniza imediatamente no store do ecossistema
-  updateEcosystemWorkshopStatus(workshopId, newStatus);
-
   const supabase = createServerSupabaseClient();
 
   try {
@@ -32,7 +29,7 @@ export async function moderateWorkshopAction(
       .eq("id", workshopId);
 
     if (error) {
-      console.warn("[moderateWorkshopAction] Supabase update warning:", error.message);
+      throw new Error(`Falha ao atualizar oficina: ${error.message}`);
     }
 
     revalidatePath("/oficinas");
@@ -56,8 +53,8 @@ export async function moderateWorkshopAction(
   } catch (err) {
     console.error("[moderateWorkshopAction] error:", err);
     return {
-      success: true,
-      message: "Status da oficina atualizado no painel.",
+      success: false,
+      message: err instanceof Error ? err.message : "Falha ao atualizar o status da oficina.",
       status: newStatus
     };
   }
@@ -89,7 +86,10 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
       ? cleanCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
       : data.cnpj.trim();
 
-  const blindIndex = `blind_${cleanCnpj || Math.random().toString(36).substring(2, 14)}`;
+  if (cleanCnpj.length !== 14) throw new Error("CNPJ inválido.");
+  const pepper = process.env.CPF_BLIND_INDEX_PEPPER;
+  if (!pepper) throw new Error("Chave de proteção de documentos não configurada.");
+  const blindIndex = createHmac("sha256", pepper).update(`cnpj:${cleanCnpj}`).digest("hex");
 
   try {
     const { data: org, error } = await supabase
@@ -107,11 +107,11 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
       .single();
 
     if (error) {
-      console.warn("[createDirectWorkshopAction] Supabase insert warning:", error.message);
+      throw new Error(`Falha ao cadastrar oficina: ${error.message}`);
     }
 
     if (org?.id && data.city) {
-      await supabase.from("organization_units").insert({
+      const { error: unitError } = await supabase.from("organization_units").insert({
         organization_id: org.id,
         name: `${data.tradeName.trim()} — Matriz`,
         is_headquarters: true,
@@ -120,21 +120,13 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
         address_neighborhood: "Centro",
         address_city: data.city.trim(),
         address_state: (data.state || "RJ").trim().toUpperCase(),
-        address_postal_code: "00000-000",
-        phone: data.phone.trim()
+        address_zip_code: "00000-000"
       });
+      if (unitError) {
+        await supabase.from("organizations").delete().eq("id", org.id);
+        throw new Error(`Falha ao cadastrar unidade: ${unitError.message}`);
+      }
     }
-
-    const ecoW = registerPendingWorkshopProposal({
-      trade_name: data.tradeName,
-      legal_name: data.legalName || data.tradeName,
-      cnpj_masked: maskedCnpj,
-      email: data.email,
-      phone: data.phone,
-      city: data.city,
-      state: data.state
-    });
-    updateEcosystemWorkshopStatus(ecoW.id, "active");
 
     revalidatePath("/oficinas");
     revalidatePath("/dashboard");
@@ -142,43 +134,13 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
     return {
       success: true,
       message: `Oficina ${data.tradeName} credenciada e ativada na rede com sucesso!`,
-      workshop: org || {
-        id: ecoW.id,
-        trade_name: data.tradeName,
-        legal_name: data.legalName || data.tradeName,
-        cnpj_masked: maskedCnpj,
-        email: data.email,
-        phone: data.phone,
-        status: "active",
-        created_at: new Date().toISOString()
-      }
+      workshop: org
     };
   } catch (err) {
     console.error("[createDirectWorkshopAction] error:", err);
-    const ecoW = registerPendingWorkshopProposal({
-      trade_name: data.tradeName,
-      legal_name: data.legalName || data.tradeName,
-      cnpj_masked: maskedCnpj,
-      email: data.email,
-      phone: data.phone,
-      city: data.city,
-      state: data.state
-    });
-    updateEcosystemWorkshopStatus(ecoW.id, "active");
-
     return {
-      success: true,
-      message: `Oficina ${data.tradeName} adicionada com sucesso.`,
-      workshop: {
-        id: ecoW.id,
-        trade_name: data.tradeName,
-        legal_name: data.legalName || data.tradeName,
-        cnpj_masked: maskedCnpj,
-        email: data.email,
-        phone: data.phone,
-        status: "active",
-        created_at: new Date().toISOString()
-      }
+      success: false,
+      message: err instanceof Error ? err.message : "Falha ao cadastrar a oficina."
     };
   }
 }

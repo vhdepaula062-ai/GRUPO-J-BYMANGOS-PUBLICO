@@ -15,7 +15,6 @@
     "@grupo-j/design-tokens": "workspace:*",
     "@grupo-j/domain": "workspace:*",
     "@grupo-j/payments": "workspace:*",
-    "@grupo-j/test-utils": "workspace:*",
     "@grupo-j/types": "workspace:*",
     "@grupo-j/ui-web": "workspace:*",
     "@grupo-j/validation": "workspace:*",

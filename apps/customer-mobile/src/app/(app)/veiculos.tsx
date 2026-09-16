@@ -1,37 +1,60 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
-import { mockVehicle } from "@grupo-j/test-utils";
+import { MobileCard, MobileBadge, MobileButton, MobileInput } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
+import { api } from "../../lib/api";
+import { useApiResource } from "../../hooks/useApiResource";
+
+type Vehicle = { id: string; plate: string; brand: string; model: string; model_year: number; manufacture_year: number; color: string; renavam_masked: string | null };
 
 export default function VeiculosScreen() {
+  const load = useCallback(() => api.getVehicles<Vehicle[]>(), []);
+  const { data: vehicles, loading, error, reload } = useApiResource(load);
+  const [showForm, setShowForm] = useState(false);
+  const [plate, setPlate] = useState(""); const [brand, setBrand] = useState(""); const [model, setModel] = useState(""); const [year, setYear] = useState(""); const [color, setColor] = useState("");
+  const saveVehicle = async () => {
+    try {
+      await api.createVehicle({ plate, brand, model, modelYear: Number(year), manufactureYear: Number(year), color });
+      setShowForm(false); setPlate(""); setBrand(""); setModel(""); setYear(""); setColor(""); await reload();
+    } catch (cause) { Alert.alert("Veículo não cadastrado", cause instanceof Error ? cause.message : "Confira os dados."); }
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <div>
+          <View>
             <Text style={styles.title}>Meus Veículos</Text>
             <Text style={styles.subtitle}>Frota cadastrada na sua assinatura Grupo J.</Text>
-          </div>
-          <MobileButton label="+ Adicionar" size="sm" variant="primary" />
+          </View>
+          <MobileButton label={showForm ? "Cancelar" : "+ Adicionar"} size="sm" variant="primary" onPress={() => setShowForm((value) => !value)} />
         </View>
-
-        <MobileCard>
+        {showForm ? <MobileCard>
+          <MobileInput label="Placa" value={plate} onChangeText={setPlate} autoCapitalize="characters" placeholder="ABC1D23" />
+          <MobileInput label="Marca" value={brand} onChangeText={setBrand} placeholder="Volkswagen" />
+          <MobileInput label="Modelo" value={model} onChangeText={setModel} placeholder="Gol" />
+          <MobileInput label="Ano" value={year} onChangeText={setYear} keyboardType="numeric" placeholder="2024" />
+          <MobileInput label="Cor" value={color} onChangeText={setColor} placeholder="Prata" />
+          <MobileButton label="Salvar veículo" variant="primary" onPress={() => void saveVehicle()} />
+        </MobileCard> : null}
+        {loading ? <ActivityIndicator /> : null}
+        {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
+        {!loading && !error && vehicles?.length === 0 ? <Text style={styles.subtitle}>Nenhum veículo cadastrado.</Text> : null}
+        {(vehicles ?? []).map((vehicle, index) => <MobileCard key={vehicle.id}>
           <View style={styles.vehicleHeader}>
-            <div>
-              <Text style={styles.plateText}>{mockVehicle.plate}</Text>
-              <Text style={styles.modelText}>{mockVehicle.brand} {mockVehicle.model}</Text>
-            </div>
-            <MobileBadge label="Principal" variant="success" />
+            <View>
+              <Text style={styles.plateText}>{vehicle.plate}</Text>
+              <Text style={styles.modelText}>{vehicle.brand} {vehicle.model}</Text>
+            </View>
+            {index === 0 ? <MobileBadge label="Principal" variant="success" /> : null}
           </View>
 
           <View style={styles.detailsRow}>
-            <Text style={styles.detailItem}>Ano: {mockVehicle.modelYear}/{mockVehicle.manufactureYear}</Text>
-            <Text style={styles.detailItem}>Cor: {mockVehicle.color}</Text>
-            <Text style={styles.detailItem}>Renavam: {mockVehicle.renavamMasked}</Text>
+            <Text style={styles.detailItem}>Ano: {vehicle.model_year}/{vehicle.manufacture_year}</Text>
+            <Text style={styles.detailItem}>Cor: {vehicle.color}</Text>
+            <Text style={styles.detailItem}>Renavam: {vehicle.renavam_masked ?? "Não informado"}</Text>
           </View>
-        </MobileCard>
+        </MobileCard>)}
       </ScrollView>
     </SafeAreaView>
   );

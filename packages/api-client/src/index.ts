@@ -87,4 +87,102 @@ export class ApiClient {
       body: JSON.stringify(body)
     });
   }
+
+  public async patch<T, B = unknown>(path: string, body: B): Promise<ApiResponse<T>> {
+    return this.request<ApiResponse<T>>(path, {
+      method: "PATCH",
+      body: JSON.stringify(body)
+    });
+  }
+
+  public async delete<T>(path: string): Promise<ApiResponse<T>> {
+    return this.request<ApiResponse<T>>(path, {
+      method: "DELETE"
+    });
+  }
+
+  public async login<T = unknown>(identifier: string, password: string) {
+    return this.post<T, { identifier: string; password: string }>("/api/v1/auth/login", { identifier, password });
+  }
+
+  public async register<T = unknown>(data: {
+    fullName: string;
+    email: string;
+    cpf: string;
+    phone: string;
+    password: string;
+    termsAccepted: boolean;
+    privacyAccepted: boolean;
+  }) {
+    return this.post<T, typeof data>("/api/v1/auth/register", data);
+  }
+
+  public async refreshSession<T = unknown>(refreshToken: string) {
+    return this.post<T, { refreshToken: string }>("/api/v1/auth/refresh", { refreshToken });
+  }
+
+  public async logout<T = unknown>() {
+    return this.post<T, Record<string, never>>("/api/v1/auth/logout", {});
+  }
+
+  // --- Domain Methods ---
+  public async getMe<T = unknown>() {
+    return this.get<T>("/api/v1/me");
+  }
+
+  public async deleteMyAccount<T = unknown>() {
+    return this.delete<T>("/api/v1/me");
+  }
+
+  public async getVehicles<T = unknown>() {
+    return this.get<T>("/api/v1/vehicles");
+  }
+
+  public async createVehicle<T = unknown, B = unknown>(data: B) {
+    return this.post<T, B>("/api/v1/vehicles", data);
+  }
+
+  public async updateVehicle<T = unknown, B = unknown>(id: string, data: B) {
+    return this.patch<T, B>(`/api/v1/vehicles/${id}`, data);
+  }
+
+  public async getWorkshops<T = unknown>() {
+    return this.get<T>("/api/v1/workshops");
+  }
+
+  public async getWorkshop<T = unknown>(id: string) {
+    return this.get<T>(`/api/v1/workshops/${id}`);
+  }
+
+  public async requestWorkshopChange<T = unknown>(workshopId: string) {
+    return this.post<T, { workshopId: string }>("/api/v1/workshops/change-request", { workshopId });
+  }
+
+  public async getCurrentSubscription<T = unknown>() {
+    return this.get<T>("/api/v1/subscriptions/current");
+  }
+
+  public async getPayments<T = unknown>() {
+    return this.get<T>("/api/v1/payments");
+  }
+
+  public async getBenefits<T = unknown>() {
+    return this.get<T>("/api/v1/benefits");
+  }
+
+  public async getPromotions<T = unknown>() {
+    return this.get<T>("/api/v1/promotions");
+  }
+
+  public async getServiceOrders<T = unknown>() {
+    return this.get<T>("/api/v1/service-orders");
+  }
+
+  public async createServiceOrder<T = unknown, B = unknown>(data: B) {
+    return this.post<T, B>("/api/v1/service-orders", data);
+  }
+
+  public async validateVoucher<T = unknown, B = unknown>(data: B) {
+    return this.post<T, B>("/api/v1/vouchers/validate", data);
+  }
 }

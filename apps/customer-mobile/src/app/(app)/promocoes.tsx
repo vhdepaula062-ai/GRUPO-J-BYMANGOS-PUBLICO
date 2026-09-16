@@ -1,10 +1,16 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
+import { api } from "../../lib/api";
+import { useApiResource } from "../../hooks/useApiResource";
+
+type Promotion = { id: string; title: string; description: string; discount_percentage: number | null; price_cents: number | null; end_date: string; workshop: { trade_name: string } };
 
 export default function PromocoesScreen() {
+  const load = useCallback(() => api.getPromotions<Promotion[]>(), []);
+  const { data, loading, error } = useApiResource(load);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -12,18 +18,18 @@ export default function PromocoesScreen() {
           <Text style={styles.title}>Ofertas e Promoções</Text>
           <Text style={styles.subtitle}>Descontos exclusivos oferecidos pelas oficinas credenciadas</Text>
         </View>
-
-        <MobileCard>
+        {loading ? <ActivityIndicator /> : null}
+        {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
+        {!loading && !error && data?.length === 0 ? <Text style={styles.subtitle}>Nenhuma promoção ativa no momento.</Text> : null}
+        {(data ?? []).map((promotion) => <MobileCard key={promotion.id}>
           <View style={styles.promoHeader}>
-            <Text style={styles.workshopName}>Auto Mecânica Modelo Barra</Text>
-            <MobileBadge label="20% OFF" variant="danger" />
+            <Text style={styles.workshopName}>{promotion.workshop?.trade_name ?? "Oficina credenciada"}</Text>
+            {promotion.discount_percentage ? <MobileBadge label={`${promotion.discount_percentage}% OFF`} variant="danger" /> : null}
           </View>
-          <Text style={styles.promoTitle}>Troca de Pastilhas de Freio</Text>
-          <Text style={styles.promoDesc}>
-            Desconto de 20% na mão de obra e peças para substituição de pastilhas dianteiras.
-          </Text>
-          <Text style={styles.promoValid}>Válido até 31/10/2026</Text>
-        </MobileCard>
+          <Text style={styles.promoTitle}>{promotion.title}</Text>
+          <Text style={styles.promoDesc}>{promotion.description}</Text>
+          <Text style={styles.promoValid}>Válido até {new Date(`${promotion.end_date}T12:00:00`).toLocaleDateString("pt-BR")}</Text>
+        </MobileCard>)}
       </ScrollView>
     </SafeAreaView>
   );

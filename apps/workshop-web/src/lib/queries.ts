@@ -3,7 +3,6 @@
  * O usuário logado é sempre associado a uma organização via user_roles.
  */
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getWorkshopByEmail } from "@grupo-j/database";
 
 // Busca a organização vinculada ao usuário autenticado
 export async function getMyWorkshop() {
@@ -14,9 +13,7 @@ export async function getMyWorkshop() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // 1. Tenta buscar no Supabase
-  try {
-    const { data, error } = await supabase
+  const { data, error } = await supabase
       .from("organization_members")
       .select(
         `
@@ -29,45 +26,8 @@ export async function getMyWorkshop() {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!error && data?.organization) {
-      return {
-        role: data.role as string,
-        organization: data.organization as unknown as Record<string, unknown>
-      };
-    }
-  } catch {
-    // Continua para o fallback do ecossistema
-  }
-
-  // 2. Busca pelo e-mail no store do ecossistema
-  if (user.email) {
-    const ecoWorkshop = getWorkshopByEmail(user.email);
-    if (ecoWorkshop) {
-      return {
-        role: "workshop_admin",
-        organization: ecoWorkshop as unknown as Record<string, unknown>
-      };
-    }
-  }
-
-  // 3. Se houver metadados de cadastro no auth.user
-  if (user.user_metadata?.trade_name) {
-    return {
-      role: "workshop_admin",
-      organization: {
-        id: user.user_metadata.organization_id || user.id,
-        trade_name: user.user_metadata.trade_name,
-        legal_name: user.user_metadata.trade_name,
-        cnpj_masked: user.user_metadata.cnpj || "00.000.000/0001-00",
-        email: user.email || "",
-        phone: user.user_metadata.phone || "",
-        status: user.user_metadata.status || "pending_approval",
-        created_at: user.created_at
-      }
-    };
-  }
-
-  return null;
+  if (error || !data?.organization) return null;
+  return { role: data.role as string, organization: data.organization as unknown as Record<string, unknown> };
 }
 
 // KPIs da oficina: clientes vinculados, atendimentos do mês, assinatura
@@ -84,7 +44,7 @@ export async function getWorkshopKpis(workshopId: string): Promise<WorkshopKpis>
   try {
     const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
-    const [{ count: linked }, { count: checkins }, { count: pending }] = await Promise.all([
+    const [linkedResult, checkinsResult, pendingResult, subscriptionResult] = await Promise.all([
       supabase
         .from("workshop_assignments")
         .select("*", { count: "exact", head: true })
@@ -100,21 +60,31 @@ export async function getWorkshopKpis(workshopId: string): Promise<WorkshopKpis>
         .from("benefit_redemptions")
         .select("*", { count: "exact", head: true })
         .eq("workshop_id", workshopId)
-        .in("status", ["requested", "validated"])
+        .in("status", ["requested", "validated"]),
+      supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("organization_id", workshopId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
     ]);
 
+    const queryError = linkedResult.error || checkinsResult.error || pendingResult.error || subscriptionResult.error;
+    if (queryError) throw queryError;
+
     return {
-      linkedCustomers: linked ?? 0,
-      monthlyCheckIns: checkins ?? 0,
-      subscriptionStatus: "active",
-      pendingAppointments: pending ?? 0
+      linkedCustomers: linkedResult.count ?? 0,
+      monthlyCheckIns: checkinsResult.count ?? 0,
+      subscriptionStatus: subscriptionResult.data?.status ?? "none",
+      pendingAppointments: pendingResult.count ?? 0
     };
   } catch (error) {
     console.error("[getWorkshopKpis] Error fetching workshop KPIs, defaulting to 0:", error);
     return {
       linkedCustomers: 0,
       monthlyCheckIns: 0,
-      subscriptionStatus: "active",
+      subscriptionStatus: "unavailable",
       pendingAppointments: 0
     };
   }
@@ -173,7 +143,7 @@ export async function getWorkshopTeam(workshopId: string): Promise<TeamMember[]>
   const supabase = createServerSupabaseClient();
 
   const { data, error } = await supabase
-    .from("org_members")
+    .from("organization_members")
     .select(
       `
       role, created_at,
@@ -209,8 +179,8 @@ export async function getWorkshopPromotions(workshopId: string): Promise<Promoti
 
   const { data, error } = await supabase
     .from("promotions")
-    .select("id, title, description, status, created_at, valid_from, valid_until")
-    .eq("organization_id", workshopId)
+    .select("id, title, description, status, created_at, start_date, end_date")
+    .eq("workshop_id", workshopId)
     .order("created_at", { ascending: false });
 
   if (error) return [];

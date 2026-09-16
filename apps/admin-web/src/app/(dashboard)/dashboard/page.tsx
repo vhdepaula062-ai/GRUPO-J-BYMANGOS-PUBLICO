@@ -189,7 +189,7 @@ export default async function AdminDashboardPage() {
                   </div>
                 ) : (
                   pendingPromos
-                    .filter((p) => p.status === "pending_review")
+                    .filter((p) => p.status === "pending_approval")
                     .slice(0, 3)
                     .map((promo) => (
                       <div
@@ -215,7 +215,7 @@ export default async function AdminDashboardPage() {
                       </div>
                     ))
                 )}
-                {pendingPromos.filter((p) => p.status === "pending_review").length > 3 && (
+                {pendingPromos.filter((p) => p.status === "pending_approval").length > 3 && (
                   <Link href="/promocoes">
                     <p className="text-xs text-center text-[#034EFE] font-semibold hover:underline py-2">
                       Ver todas ({kpis.pendingModerationCount} pendentes) →

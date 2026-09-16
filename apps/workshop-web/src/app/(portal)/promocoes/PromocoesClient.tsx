@@ -26,14 +26,15 @@ export function PromocoesClient({ promotions }: Props) {
       try {
         await createWorkshopPromotionAction({ title, description });
       } catch (err: unknown) {
-        console.warn("[createWorkshopPromotionAction fallback]", err);
+        setFeedback(err instanceof Error ? err.message : "Falha ao cadastrar a promoção.");
+        return;
       }
 
       const nova: PromotionRow = {
         id: `promo-ws-${Date.now()}`,
         title,
         description,
-        status: "pending_review",
+        status: "pending_approval",
         created_at: new Date().toISOString()
       };
 
@@ -97,8 +98,8 @@ export function PromocoesClient({ promotions }: Props) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {items.map((p) => {
-            const isPendingMod = p.status === "pending_review";
-            const isApproved = p.status === "approved";
+            const isPendingMod = p.status === "pending_approval";
+            const isApproved = p.status === "approved" || p.status === "active";
             return (
               <div
                 key={p.id}

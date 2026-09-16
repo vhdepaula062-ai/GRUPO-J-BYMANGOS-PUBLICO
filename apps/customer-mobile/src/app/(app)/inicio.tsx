@@ -1,24 +1,41 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
-import { mockCustomer, mockVehicle, mockWorkshop } from "@grupo-j/test-utils";
 import { tokens } from "@grupo-j/design-tokens";
+import { api } from "../../lib/api";
+import { useApiResource } from "../../hooks/useApiResource";
+
+type HomeData = {
+  profile: { full_name: string };
+  vehicles: Array<{ plate: string; brand: string; model: string; model_year: number }>;
+  subscriptions: Array<{ status: string; plan: { name: string; price_cents: number } }>;
+  workshop: null | { trade_name: string; workshop_profiles: null | { rating_average: number; rating_count: number }; organization_units: Array<{ address_street: string; address_number: string; address_neighborhood: string }> };
+};
 
 export default function InicioScreen() {
   const router = useRouter();
+  const load = useCallback(() => api.getMe<HomeData>(), []);
+  const { data, loading, error } = useApiResource(load);
+  if (loading) return <SafeAreaView style={styles.container}><ActivityIndicator style={{ marginTop: 48 }} /></SafeAreaView>;
+  if (error || !data) return <SafeAreaView style={styles.container}><Text style={{ padding: 20, color: tokens.colors.status.danger }}>{error ?? "Dados indisponíveis"}</Text></SafeAreaView>;
+  const subscription = data.subscriptions?.[0];
+  const vehicle = data.vehicles?.[0];
+  const workshop = data.workshop;
+  const unit = workshop?.organization_units?.[0];
+  const workshopProfile = workshop?.workshop_profiles;
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Topo / Boas-vindas */}
         <View style={styles.header}>
-          <div>
-            <Text style={styles.greeting}>Olá, {mockCustomer.fullName.split(" ")[0]} 👋</Text>
-            <Text style={styles.planInfo}>Plano Motorista Grupo J • R$ 50,00/mês</Text>
-          </div>
-          <MobileBadge label="Ativo" variant="success" />
+          <View>
+            <Text style={styles.greeting}>Olá, {data.profile.full_name.split(" ")[0]} 👋</Text>
+            <Text style={styles.planInfo}>{subscription?.plan?.name ?? "Plano ainda não contratado"}</Text>
+          </View>
+          <MobileBadge label={subscription?.status === "active" ? "Ativo" : "Pendente"} variant={subscription?.status === "active" ? "success" : "warning"} />
         </View>
 
         {/* Card de Ação Rápida de Resgate */}
@@ -43,11 +60,11 @@ export default function InicioScreen() {
               <Text style={{ fontSize: 24 }}>🔧</Text>
             </View>
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.workshopName}>Auto Mecânica Modelo Barra</Text>
+              <Text style={styles.workshopName}>{workshop?.trade_name ?? "Escolha uma oficina credenciada"}</Text>
               <Text style={styles.workshopAddress}>
-                {mockWorkshop.addressStreet}, {mockWorkshop.addressNumber} — {mockWorkshop.addressNeighborhood}
+                {unit ? `${unit.address_street}, ${unit.address_number} — ${unit.address_neighborhood}` : "Nenhuma oficina vinculada"}
               </Text>
-              <Text style={styles.workshopRating}>★ 4.9 (154 avaliações)</Text>
+              {workshopProfile ? <Text style={styles.workshopRating}>★ {workshopProfile.rating_average} ({workshopProfile.rating_count} avaliações)</Text> : null}
             </View>
           </View>
           <View style={styles.workshopCardFooter}>
@@ -61,11 +78,11 @@ export default function InicioScreen() {
         <Text style={styles.sectionTitle}>Veículo Cadastrado</Text>
         <MobileCard>
           <View style={styles.vehicleRow}>
-            <div>
-              <Text style={styles.vehiclePlate}>{mockVehicle.plate}</Text>
-              <Text style={styles.vehicleModel}>{mockVehicle.brand} {mockVehicle.model} ({mockVehicle.modelYear})</Text>
-            </div>
-            <MobileBadge label="Elegível" variant="info" />
+            <View>
+              <Text style={styles.vehiclePlate}>{vehicle?.plate ?? "Nenhum veículo"}</Text>
+              <Text style={styles.vehicleModel}>{vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.model_year})` : "Cadastre um veículo para usar benefícios"}</Text>
+            </View>
+            <MobileBadge label={subscription?.status === "active" && vehicle ? "Elegível" : "Pendente"} variant={subscription?.status === "active" && vehicle ? "info" : "neutral"} />
           </View>
         </MobileCard>
       </ScrollView>

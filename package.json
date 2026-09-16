@@ -5,6 +5,7 @@
   "description": "Ecossistema Digital Grupo J - Plataforma Multiempresa de Manutenção Automotiva por Assinatura",
   "packageManager": "pnpm@12.4.1",
   "scripts": {
+    "build:apk": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android.ps1",
     "build": "turbo run build",
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=admin-web --filter=workshop-web --filter=api",

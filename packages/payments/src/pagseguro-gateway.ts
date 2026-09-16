@@ -21,70 +21,43 @@ export interface PagSeguroConfig {
 export class PagSeguroPaymentGateway implements PaymentGateway {
   private readonly token: string;
   private readonly webhookSecret: string;
-  private readonly baseUrl: string;
 
   constructor(config: PagSeguroConfig) {
     this.token = config.token;
     this.webhookSecret = config.webhookSecret || "";
-    this.baseUrl = config.sandbox
-      ? "https://sandbox.api.pagseguro.com"
-      : "https://api.pagseguro.com";
-    void this.baseUrl;
+    void config.sandbox;
   }
 
-  async createCustomer(input: CreateCustomerInput): Promise<GatewayCustomer> {
+  async createCustomer(_input: CreateCustomerInput): Promise<GatewayCustomer> {
     if (!this.token) {
       throw new Error("Token PagSeguro ausente. Configure PAGSEGURO_TOKEN.");
     }
 
-    // Criação de cliente no PagBank
-    return {
-      gatewayCustomerId: `ps_cust_${Date.now()}`,
-      email: input.email
-    };
+    throw new Error("Adapter PagSeguro não ativado: configure e homologue o contrato oficial antes de cobrar clientes.");
   }
 
-  async createSubscription(input: CreateSubscriptionInput): Promise<GatewaySubscription> {
+  async createSubscription(_input: CreateSubscriptionInput): Promise<GatewaySubscription> {
     if (!this.token) {
       throw new Error("Token PagSeguro ausente. Configure PAGSEGURO_TOKEN.");
     }
 
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 30);
-
-    return {
-      gatewaySubscriptionId: `ps_sub_${input.idempotencyKey.slice(0, 8)}_${Date.now()}`,
-      status: "pending",
-      currentPeriodStart: now.toISOString(),
-      currentPeriodEnd: periodEnd.toISOString()
-    };
+    throw new Error("Adapter PagSeguro não ativado: configure e homologue o contrato oficial antes de criar assinaturas.");
   }
 
-  async getSubscription(gatewaySubscriptionId: string): Promise<GatewaySubscription> {
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 30);
-
-    return {
-      gatewaySubscriptionId,
-      status: "active",
-      currentPeriodStart: now.toISOString(),
-      currentPeriodEnd: periodEnd.toISOString()
-    };
+  async getSubscription(_gatewaySubscriptionId: string): Promise<GatewaySubscription> {
+    throw new Error("Adapter PagSeguro não ativado: consulta de assinatura indisponível.");
   }
 
   async cancelSubscription(_gatewaySubscriptionId: string): Promise<void> {
     if (!this.token) {
       throw new Error("Token PagSeguro ausente.");
     }
-    // Cancelamento via API de assinaturas do PagSeguro
+    throw new Error("Adapter PagSeguro não ativado: cancelamento de assinatura indisponível.");
   }
 
   verifyWebhookSignature(headers: Record<string, string>, rawBody: string): boolean {
     if (!this.webhookSecret) {
-      // Se webhookSecret não configurado em ambiente de transição, aceita se tiver token
-      return Boolean(this.token);
+      return false;
     }
     const signature = headers["x-pagseguro-signature"] || headers["x-signature"];
     if (!signature) return false;
@@ -96,7 +69,8 @@ export class PagSeguroPaymentGateway implements PaymentGateway {
   }
 
   normalizeEvent(payload: Record<string, unknown>): NormalizedPaymentEvent {
-    const id = (payload.id as string) || `evt_${Date.now()}`;
+    const id = payload.id as string | undefined;
+    if (!id) throw new Error("Webhook PagSeguro sem identificador do evento.");
     const status = (payload.status as string) || "";
 
     let eventType: NormalizedPaymentEvent["eventType"] = "payment_approved";

@@ -1,14 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-grupo-j.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Cria um cliente Supabase para uso no lado do SERVER (Server Components, Route Handlers, Server Actions).
  * Lê e escreve cookies via next/headers para manter a sessão sincronizada.
  */
 export function createServerSupabaseClient() {
+  if (!supabaseUrl || !supabaseAnonKey) throw new Error("Supabase não configurado");
   const cookieStore = cookies();
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {

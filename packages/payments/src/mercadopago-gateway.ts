@@ -25,48 +25,26 @@ export class MercadoPagoPaymentGateway implements PaymentGateway {
     this.webhookSecret = config.webhookSecret;
   }
 
-  async createCustomer(input: CreateCustomerInput): Promise<GatewayCustomer> {
+  async createCustomer(_input: CreateCustomerInput): Promise<GatewayCustomer> {
     if (!this.accessToken) {
       throw new Error("Credencial Mercado Pago ausente. Verifique MERCADO_PAGO_ACCESS_TOKEN.");
     }
-    // Implementação via fetch HTTP oficial do Mercado Pago
-    return {
-      gatewayCustomerId: `mp_cust_${Date.now()}`,
-      email: input.email
-    };
+    throw new Error("Adapter Mercado Pago não ativado: configure e homologue o contrato oficial antes de cobrar clientes.");
   }
 
-  async createSubscription(input: CreateSubscriptionInput): Promise<GatewaySubscription> {
+  async createSubscription(_input: CreateSubscriptionInput): Promise<GatewaySubscription> {
     if (!this.accessToken) {
       throw new Error("Credencial Mercado Pago ausente.");
     }
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 30);
-
-    return {
-      gatewaySubscriptionId: `mp_sub_${input.idempotencyKey.slice(0, 8)}_${Date.now()}`,
-      status: "pending",
-      currentPeriodStart: now.toISOString(),
-      currentPeriodEnd: periodEnd.toISOString()
-    };
+    throw new Error("Adapter Mercado Pago não ativado: configure e homologue o contrato oficial antes de criar assinaturas.");
   }
 
-  async getSubscription(gatewaySubscriptionId: string): Promise<GatewaySubscription> {
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + 30);
-
-    return {
-      gatewaySubscriptionId,
-      status: "active",
-      currentPeriodStart: now.toISOString(),
-      currentPeriodEnd: periodEnd.toISOString()
-    };
+  async getSubscription(_gatewaySubscriptionId: string): Promise<GatewaySubscription> {
+    throw new Error("Adapter Mercado Pago não ativado: consulta de assinatura indisponível.");
   }
 
   async cancelSubscription(_gatewaySubscriptionId: string): Promise<void> {
-    // Chamada à API Mercado Pago de cancelamento
+    throw new Error("Adapter Mercado Pago não ativado: cancelamento de assinatura indisponível.");
   }
 
   verifyWebhookSignature(headers: Record<string, string>, rawBody: string): boolean {
@@ -92,8 +70,10 @@ export class MercadoPagoPaymentGateway implements PaymentGateway {
       eventType = "subscription_canceled";
     }
 
+    const eventId = payload.id as string | undefined;
+    if (!eventId) throw new Error("Webhook Mercado Pago sem identificador do evento.");
     return {
-      eventId: (payload.id as string) || `mp_evt_${Date.now()}`,
+      eventId,
       eventType,
       gatewaySubscriptionId: payload.subscription_id as string | undefined,
       amountCents: (payload.amount as number) || 5000,

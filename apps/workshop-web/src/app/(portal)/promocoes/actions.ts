@@ -16,13 +16,17 @@ export async function createWorkshopPromotionAction(data: {
 
   const workshopId = (workshopData.organization as { id: string }).id;
   const supabase = createServerSupabaseClient();
+  const startDate = new Date();
+  const endDate = new Date(startDate); endDate.setDate(endDate.getDate() + 30);
 
   const { error } = await supabase.from("promotions").insert({
-    organization_id: workshopId,
+    workshop_id: workshopId,
     title: data.title,
     description: data.description,
-    status: "pending_review",
-    created_at: new Date().toISOString()
+    discount_percentage: data.discountPercentage ?? null,
+    start_date: startDate.toISOString().slice(0, 10),
+    end_date: endDate.toISOString().slice(0, 10),
+    status: "pending_approval"
   });
 
   if (error) {

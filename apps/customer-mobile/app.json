@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Grupo J",
+    "name": "Grupo J Staging",
     "slug": "grupo-j-customer",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -8,20 +8,23 @@
     "scheme": "grupoj",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/splash.png",
       "backgroundColor": "#00091D",
       "resizeMode": "contain"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.grupoj.customer",
+      "bundleIdentifier": "br.com.grupoj.autocenter.staging",
       "infoPlist": {
         "NSCameraUsageDescription": "O Grupo J necessita de acesso à câmera para fotografar o hodômetro e placa do veículo no check-in.",
         "NSLocationWhenInUseUsageDescription": "Sua localização é utilizada exclusivamente para exibir os centros automotivos credenciados mais próximos de você."
       }
     },
     "android": {
-      "package": "com.grupoj.customer",
+      "package": "br.com.grupoj.autocenter.staging",
+      "versionCode": 1,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#00091D"
       },
       "permissions": [
@@ -34,6 +37,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "environment": "staging",
+      "apiUrl": "https://staging-api.grupoj.com.br",
+      "paymentMode": "sandbox",
+      "planMonthlyPrice": 50.00
     }
   }
 }

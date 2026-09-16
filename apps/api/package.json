@@ -17,7 +17,6 @@
     "@grupo-j/observability": "workspace:*",
     "@grupo-j/payments": "workspace:*",
     "@grupo-j/security": "workspace:*",
-    "@grupo-j/test-utils": "workspace:*",
     "@grupo-j/types": "workspace:*",
     "@grupo-j/validation": "workspace:*",
     "next": "^14.2.24",

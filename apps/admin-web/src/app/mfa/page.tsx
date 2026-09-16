@@ -16,19 +16,38 @@ import {
   ShieldCheck,
   ArrowLeft
 } from "@grupo-j/ui-web";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminMfaPage() {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
+    setErrorMessage(null);
+    try {
+      const supabase = createClient();
+      const { data: factors, error: factorError } = await supabase.auth.mfa.listFactors();
+      if (factorError) throw factorError;
+      const factor = factors.totp.find((item) => item.status === "verified");
+      if (!factor) throw new Error("Nenhum autenticador TOTP verificado nesta conta.");
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: factor.id });
+      if (challengeError) throw challengeError;
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: factor.id,
+        challengeId: challenge.id,
+        code
+      });
+      if (verifyError) throw verifyError;
+      router.replace("/dashboard");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Não foi possível validar o código.");
+    } finally {
       setIsLoading(false);
-      router.push("/dashboard");
-    }, 600);
+    }
   };
 
   return (
@@ -59,6 +78,7 @@ export default function AdminMfaPage() {
 
           <form onSubmit={handleSubmit}>
             <CardContent className="p-6 space-y-4">
+              {errorMessage && <p className="text-sm text-rose-700">{errorMessage}</p>}
               <Input
                 label="Código de Autenticação (6 dígitos)"
                 type="text"

@@ -67,18 +67,6 @@ function WorkshopAuthForm() {
       });
 
       if (authError) {
-        // Se o Supabase estiver em modo placeholder ou com erro de conexão, permite acesso imediato de apresentação
-        const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-          process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
-          authError.message.includes("Failed to fetch") ||
-          authError.message.includes("NetworkError");
-
-        if (isPlaceholder) {
-          router.push("/painel");
-          router.refresh();
-          return;
-        }
-
         setIsLoading(false);
         if (authError.message.includes("Invalid login credentials")) {
           setError("E-mail ou senha incorretos. Caso ainda não tenha cadastro, use a aba 'Criar Cadastro'.");
@@ -96,9 +84,8 @@ function WorkshopAuthForm() {
       router.push("/painel");
       router.refresh();
     } catch {
-      // Fallback gracioso para apresentação sem bloqueio
-      router.push("/painel");
-      router.refresh();
+      setIsLoading(false);
+      setError("Serviço de autenticação não configurado ou indisponível.");
     }
   };
 

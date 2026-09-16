@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { Badge, Button, CheckCircle2, XCircle, Clock, Tag, X, Plus } from "@grupo-j/ui-web";
-import { updatePromotionStatus } from "./actions";
+import { createNetworkPromotion, updatePromotionStatus } from "./actions";
 import { formatDateTime } from "@/lib/format";
 import type { PromotionRow } from "@/lib/queries";
 
@@ -26,7 +26,8 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
       try {
         await updatePromotionStatus(id, newStatus);
       } catch (err: unknown) {
-        console.warn("[updatePromotionStatus fallback]", err);
+        setFeedback(err instanceof Error ? err.message : "Falha ao moderar a promoção.");
+        return;
       }
       setPromos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: newStatus } : p))
@@ -43,26 +44,27 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
   const handleCreatePromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newDescription) return;
-
-    const nova: PromotionRow = {
-      id: `promo-${Date.now()}`,
-      title: newTitle,
-      description: newDescription,
-      status: "approved",
-      created_at: new Date().toISOString(),
-      workshop: { trade_name: newWorkshop }
-    };
-
-    setPromos((prev) => [nova, ...prev]);
-    setIsModalOpen(false);
-    setNewTitle("");
-    setNewDescription("");
-    setFeedback("Nova campanha promocional criada e publicada com sucesso!");
-    setTimeout(() => setFeedback(null), 4000);
+    startTransition(async () => {
+      try {
+        const created = await createNetworkPromotion({
+          title: newTitle,
+          description: newDescription,
+          workshopName: newWorkshop
+        });
+        setPromos((prev) => [{ ...created, workshop: { trade_name: newWorkshop } }, ...prev]);
+        setIsModalOpen(false);
+        setNewTitle("");
+        setNewDescription("");
+        setFeedback("Nova campanha promocional criada e publicada com sucesso!");
+        setTimeout(() => setFeedback(null), 4000);
+      } catch (err: unknown) {
+        setFeedback(err instanceof Error ? err.message : "Falha ao publicar a promoção.");
+      }
+    });
   };
 
-  const pendingCount = promos.filter((p) => p.status === "pending_review").length;
-  const approvedCount = promos.filter((p) => p.status === "approved").length;
+  const pendingCount = promos.filter((p) => p.status === "pending_approval").length;
+  const approvedCount = promos.filter((p) => p.status === "approved" || p.status === "active").length;
   const rejectedCount = promos.filter((p) => p.status === "rejected").length;
 
   return (
@@ -147,7 +149,7 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
           <h2 className="text-lg font-bold text-slate-900">Ofertas Submetidas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {promos.map((promo) => {
-              const isPendingStatus = promo.status === "pending_review";
+              const isPendingStatus = promo.status === "pending_approval";
               return (
                 <div
                   key={promo.id}
@@ -158,10 +160,10 @@ export function PromocoesModerator({ promotions: initialPromos }: Props) {
                       <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
                         {promo.workshop?.trade_name ?? "Oficina Parceira"}
                       </span>
-                      {promo.status === "pending_review" && (
+                      {promo.status === "pending_approval" && (
                         <Badge variant="warning">Aguardando Aprovação</Badge>
                       )}
-                      {promo.status === "approved" && (
+                      {(promo.status === "approved" || promo.status === "active") && (
                         <Badge variant="success">Aprovada</Badge>
                       )}
                       {promo.status === "rejected" && (

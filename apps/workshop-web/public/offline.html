@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modo Offline — Grupo J Oficinas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #00091D;
+      color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #0D1B2A;
+      border: 1px solid #1E293B;
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: rgba(234, 179, 8, 0.15);
+      border: 1px solid #EAB308;
+      color: #FACC15;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 9999px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 12px;
+    }
+    p {
+      color: #94A3B8;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: inline-block;
+      background: #0052FF;
+      color: #FFFFFF;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 28px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .btn:hover {
+      background: #0040CC;
+    }
+    .security-note {
+      margin-top: 20px;
+      font-size: 11px;
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">Conexão Interrompida</div>
+    <h1>Você está offline</h1>
+    <p>
+      O Portal de Oficinas Credenciadas requer conexão segura para validação instantânea de vouchers, check-in de veículos e isolamento de dados.
+    </p>
+    <button class="btn" onclick="window.location.reload()">Verificar Conexão e Recarregar</button>
+    <div class="security-note">
+      Dados de ordens de serviço e veículos não são armazenados localmente sem sincronização ativa por segurança e conformidade LGPD.
+    </div>
+  </div>
+</body>
+</html>

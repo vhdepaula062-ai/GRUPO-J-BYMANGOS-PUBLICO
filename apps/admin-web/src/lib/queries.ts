@@ -1,9 +1,8 @@
 /**
  * @grupo-j/admin-web — Queries do Supabase para o painel administrativo
- * Todas as funções retornam dados reais do banco + metadata para fallback visual.
+ * Todas as funções retornam exclusivamente dados persistidos no banco.
  */
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { readEcosystemWorkshops } from "@grupo-j/database";
 
 export async function withQueryTimeout<T>(promise: Promise<T>, fallback: T, ms = 2500): Promise<T> {
   let timer: NodeJS.Timeout;
@@ -35,21 +34,7 @@ export interface DashboardKpis {
 
 export async function getDashboardKpis(): Promise<DashboardKpis> {
   const supabase = createServerSupabaseClient();
-  const ecoWorkshops = readEcosystemWorkshops();
-  const ecoPendingCount = ecoWorkshops.filter((w) => w.status === "pending_approval").length;
-  const ecoActiveCount = ecoWorkshops.filter((w) => w.status === "active").length;
-
-  const fallbackKpis: DashboardKpis = {
-    activeMotoristasCount: 0,
-    activeWorkshopsCount: ecoActiveCount,
-    mrr: ecoActiveCount * 50000,
-    monthlyCheckIns: 0,
-    pendingModerationCount: 0,
-    pendingWorkshopsCount: ecoPendingCount
-  };
-
-  return withQueryTimeout(
-    (async () => {
+  return withQueryTimeout((async () => {
       const [
         { count: motoristas },
         { count: workshops },
@@ -64,17 +49,16 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
           .select("*", { count: "exact", head: true })
           .eq("status", "completed")
           .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-        supabase.from("promotions").select("*", { count: "exact", head: true }).eq("status", "pending_review"),
+        supabase.from("promotions").select("*", { count: "exact", head: true }).eq("status", "pending_approval"),
         supabase.from("organizations").select("*", { count: "exact", head: true }).eq("status", "pending_approval")
       ]);
 
       const activeMotoristasCount = motoristas ?? 0;
-      const activeWorkshopsCount = (workshops ?? 0) > 0 ? workshops! : ecoActiveCount;
+      const activeWorkshopsCount = workshops ?? 0;
       const mrr = activeMotoristasCount * 5000 + activeWorkshopsCount * 50000;
       const monthlyCheckIns = checkIns ?? 0;
       const pendingModerationCount = moderation ?? 0;
-      // Garante que o contador de pendentes do ecossistema seja considerado se o Supabase não tiver retornado
-      const pendingWorkshopsCount = (pendingWorkshops ?? 0) > 0 ? pendingWorkshops! : ecoPendingCount;
+      const pendingWorkshopsCount = pendingWorkshops ?? 0;
 
       return {
         activeMotoristasCount,
@@ -84,10 +68,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
         pendingModerationCount,
         pendingWorkshopsCount
       };
-    })(),
-    fallbackKpis,
-    2500
-  );
+    })(), { activeMotoristasCount: 0, activeWorkshopsCount: 0, mrr: 0, monthlyCheckIns: 0, pendingModerationCount: 0, pendingWorkshopsCount: 0 }, 5000);
 }
 
 
@@ -108,52 +89,12 @@ export interface WorkshopRow {
   state?: string;
 }
 
-export const DEFAULT_INITIAL_WORKSHOPS: WorkshopRow[] = [
-  {
-    id: "ws-pending-001",
-    trade_name: "Auto Center Estrela do Sul",
-    legal_name: "Estrela do Sul Reparações Mecânicas Ltda",
-    cnpj_masked: "28.492.103/0001-44",
-    email: "contato@estreladosul.com.br",
-    phone: "(11) 98451-2290",
-    status: "pending_approval",
-    created_at: new Date().toISOString(),
-    city: "São Paulo",
-    state: "SP"
-  },
-  {
-    id: "ws-active-001",
-    trade_name: "Auto Mecânica Bandeirantes",
-    legal_name: "Bandeirantes Motores e Peças Ltda",
-    cnpj_masked: "14.238.990/0001-52",
-    email: "financeiro@mecanicabandeirantes.com.br",
-    phone: "(11) 3456-7890",
-    status: "active",
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    city: "Campinas",
-    state: "SP"
-  }
-];
-
 export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
   const supabase = createServerSupabaseClient();
-  const ecoWorkshops = readEcosystemWorkshops();
-  const ecoList: WorkshopRow[] = ecoWorkshops.map((w) => ({
-    id: w.id,
-    trade_name: w.trade_name,
-    legal_name: w.legal_name,
-    cnpj_masked: w.cnpj_masked,
-    email: w.email,
-    phone: w.phone,
-    status: w.status,
-    created_at: w.created_at,
-    city: w.city,
-    state: w.state
-  }));
 
   let query = supabase
     .from("organizations")
-    .select("id, trade_name, legal_name, cnpj_masked, email, phone, status, created_at, organization_units(city, state)")
+    .select("id, trade_name, legal_name, cnpj_masked, email, phone, status, created_at, organization_units(address_city, address_state)")
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -163,19 +104,7 @@ export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
   }
 
   const { data, error } = await query;
-  if (error || !data || data.length === 0) {
-    let list = ecoList.length > 0 ? ecoList : DEFAULT_INITIAL_WORKSHOPS;
-    if (search) {
-      const s = search.toLowerCase();
-      return list.filter(
-        (w) =>
-          w.trade_name.toLowerCase().includes(s) ||
-          w.legal_name.toLowerCase().includes(s) ||
-          w.email.toLowerCase().includes(s)
-      );
-    }
-    return list;
-  }
+  if (error) throw new Error(error.message);
 
   const dbRows: WorkshopRow[] = (data ?? []).map((row: any) => {
     const units = Array.isArray(row.organization_units) ? row.organization_units[0] : row.organization_units;
@@ -188,21 +117,12 @@ export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
       phone: row.phone,
       status: row.status,
       created_at: row.created_at,
-      city: units?.city,
-      state: units?.state,
+      city: units?.address_city,
+      state: units?.address_state,
     };
   });
 
-  // Mescla sem duplicação de ID
-  const dbIds = new Set(dbRows.map((r) => r.id));
-  const merged = [...dbRows];
-  for (const eco of ecoList) {
-    if (!dbIds.has(eco.id)) {
-      merged.push(eco);
-    }
-  }
-
-  let finalResult = merged;
+  let finalResult = dbRows;
   if (search) {
     const s = search.toLowerCase();
     finalResult = finalResult.filter(
@@ -239,7 +159,7 @@ export async function getMotoristas(search?: string): Promise<MotoristRow[]> {
       user_roles!inner(roles!inner(code))
     `
     )
-    .eq("user_roles.roles.code", "driver")
+    .eq("user_roles.roles.code", "customer")
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -279,8 +199,8 @@ export async function getSubscriptions(): Promise<SubscriptionRow[]> {
     .from("subscriptions")
     .select(
       `
-      id, status, billing_cycle, current_period_end, created_at,
-      plan:plans(name, amount_cents),
+      id, status, current_period_end, created_at,
+      plan:plans(name, price_cents),
       customer:customers(profile:profiles(full_name, email))
     `
     )
@@ -295,11 +215,11 @@ export async function getSubscriptions(): Promise<SubscriptionRow[]> {
   return (data ?? []).map((s: Record<string, unknown>) => ({
     id: s.id as string,
     status: s.status as string,
-    billing_cycle: s.billing_cycle as string,
+    billing_cycle: "monthly",
     current_period_end: s.current_period_end as string,
     created_at: s.created_at as string,
     plan_name: (s.plan as Record<string, unknown>)?.name as string ?? "Plano Básico",
-    amount_cents: (s.plan as Record<string, unknown>)?.amount_cents as number ?? 5000
+    amount_cents: (s.plan as Record<string, unknown>)?.price_cents as number ?? 0
   }));
 }
 
@@ -321,8 +241,8 @@ export async function getTransactions(): Promise<TransactionRow[]> {
   const supabase = createServerSupabaseClient();
 
   const { data, error } = await supabase
-    .from("payment_transactions")
-    .select("id, created_at, amount_cents, type, status, description, reference_id")
+    .from("payments")
+    .select("id, created_at, amount_cents, status, gateway_payment_id, payment_method_type")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -330,7 +250,15 @@ export async function getTransactions(): Promise<TransactionRow[]> {
     console.error("[getTransactions]", error.message);
     return [];
   }
-  return data ?? [];
+  return (data ?? []).map((payment: any) => ({
+    id: payment.id,
+    created_at: payment.created_at,
+    amount_cents: payment.amount_cents,
+    type: payment.payment_method_type,
+    status: payment.status,
+    description: "Cobrança de assinatura",
+    reference_id: payment.gateway_payment_id ?? payment.id
+  }));
 }
 
 // ----------------------------------------------------------------------------
@@ -352,7 +280,7 @@ export async function getPendingPromotions(): Promise<PromotionRow[]> {
   const { data, error } = await supabase
     .from("promotions")
     .select("id, title, description, status, created_at, organization:organizations(trade_name)")
-    .in("status", ["pending_review", "approved", "rejected"])
+    .in("status", ["pending_approval", "active", "rejected"])
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -454,12 +382,20 @@ export interface AuditLogRow {
 export async function getAuditLogs(): Promise<AuditLogRow[]> {
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
-    .from("audit_log_entries")
+    .from("audit_logs")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) return [];
-  return data ?? [];
+  return (data ?? []).map((log: any) => ({
+    id: log.id,
+    created_at: log.created_at,
+    actor_id: log.actor_user_id,
+    action: log.action,
+    resource_type: log.entity_name,
+    resource_id: log.entity_id,
+    metadata: { old: log.old_values, new: log.new_values, reason: log.reason }
+  }));
 }
 
 // ----------------------------------------------------------------------------
@@ -479,11 +415,11 @@ export interface DsrRow {
 export async function getDataSubjectRequests(): Promise<DsrRow[]> {
   const supabase = createServerSupabaseClient();
   const { data, error } = await supabase
-    .from("data_subject_requests")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .from("account_erasure_requests")
+    .select("id, requested_at, status, deadline_at, notes")
+    .order("requested_at", { ascending: false });
   if (error) return [];
-  return data ?? [];
+  return (data ?? []).map((request: any) => ({ ...request, created_at: request.requested_at, request_type: "erasure" }));
 }
 
 // ----------------------------------------------------------------------------

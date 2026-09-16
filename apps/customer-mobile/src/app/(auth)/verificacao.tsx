@@ -1,21 +1,31 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileButton, MobileInput } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
+import { api, ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "../../lib/api";
+import * as SecureStore from "expo-secure-store";
+import { useAuth } from "../../providers/AuthProvider";
 
 export default function VerificacaoScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const { restore } = useAuth();
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
+    setError("");
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await api.post<{ accessToken: string; refreshToken: string }, { email: string; code: string }>("/api/v1/auth/verify", { email: params.email ?? "", code });
+      await Promise.all([SecureStore.setItemAsync(ACCESS_TOKEN_KEY, response.data.accessToken), SecureStore.setItemAsync(REFRESH_TOKEN_KEY, response.data.refreshToken)]);
+      await restore();
       router.replace("/(app)/inicio");
-    }, 600);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Código inválido."); }
+    finally { setIsLoading(false); }
   };
 
   return (
@@ -36,6 +46,7 @@ export default function VerificacaoScreen() {
           value={code}
           onChangeText={setCode}
         />
+        {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
 
         <View style={{ height: 16 }} />
         <MobileButton

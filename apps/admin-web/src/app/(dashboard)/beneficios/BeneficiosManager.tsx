@@ -38,7 +38,8 @@ export function BeneficiosManager({ benefits }: Props) {
           gracePeriodDays: Number(gracePeriodDays)
         });
       } catch (err: unknown) {
-        console.warn("[createBenefitDefinition fallback]", err);
+        setFeedback(err instanceof Error ? err.message : "Falha ao cadastrar o benefício.");
+        return;
       }
 
       const novo: BenefitDefinitionRow = {
@@ -67,7 +68,8 @@ export function BeneficiosManager({ benefits }: Props) {
       try {
         await toggleBenefitStatus(id, !currentActive);
       } catch (err: unknown) {
-        console.warn("[toggleBenefitStatus fallback]", err);
+        setFeedback(err instanceof Error ? err.message : "Falha ao atualizar o benefício.");
+        return;
       }
 
       setItems((prev) =>

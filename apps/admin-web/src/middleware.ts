@@ -11,12 +11,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   let supabaseResponse = NextResponse.next({ request });
 
-  // Se o Supabase não estiver configurado ou for placeholder, permitir navegação pública/de apresentação
   if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.startsWith("http") || supabaseUrl.includes("placeholder")) {
-    if (pathname === "/") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-    return supabaseResponse;
+    if (pathname === "/" || pathname === "/login") return pathname === "/" ? NextResponse.redirect(new URL("/login", request.url)) : supabaseResponse;
+    return NextResponse.json({ title: "Serviço não configurado", detail: "A autenticação do painel administrativo não está disponível.", status: 503 }, { status: 503 });
   }
 
   try {
@@ -69,7 +66,7 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   } catch (error) {
     console.error("Middleware auth error:", error);
-    return supabaseResponse;
+    return NextResponse.redirect(new URL("/login?error=auth_unavailable", request.url));
   }
 }
 

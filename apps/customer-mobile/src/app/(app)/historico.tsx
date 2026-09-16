@@ -1,11 +1,16 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge } from "@grupo-j/ui-mobile";
-import { mockVehicle } from "@grupo-j/test-utils";
 import { tokens } from "@grupo-j/design-tokens";
+import { api } from "../../lib/api";
+import { useApiResource } from "../../hooks/useApiResource";
+
+type ServiceOrder = { id: string; protocol: string; status: string; odometer_km: number | null; created_at: string; completed_at: string | null; vehicle: { plate: string }; workshop: { trade_name: string }; redemption: { benefit: { name: string } } | null };
 
 export default function HistoricoScreen() {
+  const load = useCallback(() => api.getServiceOrders<ServiceOrder[]>(), []);
+  const { data, loading, error } = useApiResource(load);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -13,18 +18,20 @@ export default function HistoricoScreen() {
           <Text style={styles.title}>Histórico de Manutenções</Text>
           <Text style={styles.subtitle}>Registro de serviços executados na rede credenciada</Text>
         </View>
-
-        <MobileCard>
+        {loading ? <ActivityIndicator /> : null}
+        {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
+        {!loading && !error && data?.length === 0 ? <Text style={styles.subtitle}>Nenhuma manutenção registrada.</Text> : null}
+        {(data ?? []).map((order) => <MobileCard key={order.id}>
           <View style={styles.historyHeader}>
-            <Text style={styles.serviceTitle}>Alinhamento 3D e Balanceamento</Text>
-            <MobileBadge label="Concluído" variant="success" />
+            <Text style={styles.serviceTitle}>{order.redemption?.benefit?.name ?? order.protocol}</Text>
+            <MobileBadge label={order.status === "completed" ? "Concluído" : "Em andamento"} variant={order.status === "completed" ? "success" : "info"} />
           </View>
-          <Text style={styles.serviceDate}>12 de Setembro de 2026 às 10:30</Text>
-          <Text style={styles.serviceWorkshop}>Auto Mecânica Modelo Barra</Text>
+          <Text style={styles.serviceDate}>{new Date(order.completed_at ?? order.created_at).toLocaleString("pt-BR")}</Text>
+          <Text style={styles.serviceWorkshop}>{order.workshop?.trade_name ?? "Oficina credenciada"}</Text>
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Veículo: {mockVehicle.plate} • Km: 42.150</Text>
+            <Text style={styles.footerText}>Veículo: {order.vehicle?.plate ?? "—"} • Km: {order.odometer_km?.toLocaleString("pt-BR") ?? "não informado"}</Text>
           </View>
-        </MobileCard>
+        </MobileCard>)}
       </ScrollView>
     </SafeAreaView>
   );

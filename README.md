@@ -59,6 +59,10 @@ pnpm dev
 
 ## 4. Documentação Técnica
 
+### APK Android no Windows
+
+Execute `pnpm build:apk` na raiz. O comando compila em uma cópia sem acentos no caminho e entrega `artifacts/android/grupo-j-staging.apk`, assinatura verificada e SHA-256. Requisitos, diagnóstico e limitações de integração estão em [Android: build e auditoria](docs/ANDROID_BUILD_AUDIT.md). O artefato atual é staging com demonstrações; não é uma versão final integrada.
+
 Consulte a documentação completa em `docs/`:
 * [Contexto do Sistema](docs/SYSTEM_CONTEXT.md)
 * [Arquitetura Técnica](docs/ARCHITECTURE.md)

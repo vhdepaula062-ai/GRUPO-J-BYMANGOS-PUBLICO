@@ -15,9 +15,10 @@ export default function OnboardingScreen() {
           <Text style={styles.illustrationEmoji}>🚗</Text>
         </View>
         <Text style={styles.title}>Seu carro sempre novo e seguro</Text>
-        <p style={styles.paragraph}>
-          Tenha alinhamento, balanceamento, cristalização de para-brisa e revisões preventivas garantidas em oficinas parceiras de alta confiança por apenas <strong>R$ 50,00 por mês</strong>.
-        </p>
+        <Text style={styles.paragraph}>
+          Tenha alinhamento (convergência), balanceamento, cristalização de para-brisa e revisões
+          preventivas em oficinas parceiras por apenas <Text style={styles.paragraphStrong}>R$ 50,00 por mês</Text>.
+        </Text>
       </View>
 
       <View style={styles.footer}>
@@ -76,6 +77,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
     maxWidth: 320
+  },
+  paragraphStrong: {
+    fontWeight: "800",
+    color: tokens.colors.text.primary
   },
   footer: {
     width: "100%",

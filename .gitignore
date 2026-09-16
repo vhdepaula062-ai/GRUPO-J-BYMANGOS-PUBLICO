@@ -12,6 +12,8 @@ out/
 # Expo / React Native
 .expo/
 *.jks
+*.keystore
+artifacts/
 *.p8
 *.p12
 *.key

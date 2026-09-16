@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Building2
 } from "@grupo-j/ui-web";
+import { updateWorkshopProfile } from "./actions";
 
 interface Props {
   initialData?: {
@@ -25,15 +26,22 @@ interface Props {
 
 export function ConfiguracoesClient({ initialData }: Props) {
   const [saved, setSaved] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tradeName, setTradeName] = useState(initialData?.trade_name || "");
   const [legalName, setLegalName] = useState(initialData?.legal_name || "");
   const [email, setEmail] = useState(initialData?.email || "");
   const [phone, setPhone] = useState(initialData?.phone || "");
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaved(false);
+    setErrorMessage(null);
+    try {
+      await updateWorkshopProfile({ tradeName, legalName, email, phone });
+      setSaved(true);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Não foi possível salvar as alterações.");
+    }
   };
 
   return (
@@ -49,6 +57,7 @@ export function ConfiguracoesClient({ initialData }: Props) {
           <span>Configurações atualizadas com sucesso!</span>
         </div>
       )}
+      {errorMessage && <p className="p-4 rounded-xl bg-rose-50 text-sm text-rose-700">{errorMessage}</p>}
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Identificação Cadastral */}

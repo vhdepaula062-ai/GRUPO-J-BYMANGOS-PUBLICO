@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { readEcosystemWorkshops } from "@grupo-j/database";
 
 export interface SyncEcosystemResult {
   success: boolean;
@@ -25,8 +24,6 @@ export interface SyncEcosystemResult {
 export async function syncEcosystemAction(): Promise<SyncEcosystemResult> {
   const startTime = Date.now();
   const supabase = createServerSupabaseClient();
-  const ecoWorkshops = readEcosystemWorkshops();
-  const ecoActive = ecoWorkshops.filter((w) => w.status === "active").length;
 
   try {
     // 1. Revalidação instantânea de todos os caminhos do ecossistema
@@ -43,23 +40,25 @@ export async function syncEcosystemAction(): Promise<SyncEcosystemResult> {
 
     // 2. Telemetria simultânea no banco de dados
     const [
-      { count: workshopsCount },
-      { count: customersCount },
-      { count: benefitsCount }
+      workshopsResult,
+      customersResult,
+      benefitsResult
     ] = await Promise.all([
       supabase.from("organizations").select("*", { count: "exact", head: true }).eq("status", "active"),
       supabase.from("customers").select("*", { count: "exact", head: true }),
       supabase.from("benefit_definitions").select("*", { count: "exact", head: true }).eq("is_active", true)
     ]);
 
+    const queryError = workshopsResult.error || customersResult.error || benefitsResult.error;
+    if (queryError) throw queryError;
+
     const totalLatency = Date.now() - startTime;
-    const finalWorkshopsCount = (workshopsCount ?? 0) > 0 ? workshopsCount! : ecoActive;
 
     return {
       success: true,
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       latencyMs: totalLatency,
-      message: `Ecossistema Grupo J 100% sincronizado com sucesso (${totalLatency}ms). Caches revalidados e dados atualizados.`,
+      message: `Ecossistema sincronizado com o banco de dados (${totalLatency}ms).`,
       nodes: {
         admin: {
           name: "Governança & RLS Central",
@@ -70,14 +69,14 @@ export async function syncEcosystemAction(): Promise<SyncEcosystemResult> {
         workshops: {
           name: "Rede de Centros Automotivos",
           status: "synced",
-          activeCount: finalWorkshopsCount,
+          activeCount: workshopsResult.count ?? 0,
           latencyMs: Math.round(totalLatency * 0.35)
         },
         customers: {
           name: "Motoristas & Catálogo de Benefícios",
           status: "synced",
-          activeCount: customersCount ?? 0,
-          benefitsCount: benefitsCount ?? 4
+          activeCount: customersResult.count ?? 0,
+          benefitsCount: benefitsResult.count ?? 0
         }
       }
     };
@@ -85,30 +84,29 @@ export async function syncEcosystemAction(): Promise<SyncEcosystemResult> {
     console.error("[syncEcosystemAction] Error during sync:", error);
     const totalLatency = Date.now() - startTime;
 
-    // Fallback resiliente para garantir que o admin tenha resposta imediata mesmo se houver soluço de rede
     return {
-      success: true,
+      success: false,
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       latencyMs: Math.max(totalLatency, 24),
-      message: "Ecossistema sincronizado em modo resiliente de alta velocidade. Caches locais liberados.",
+      message: "Não foi possível confirmar a sincronização com o banco de dados.",
       nodes: {
         admin: {
           name: "Governança & RLS Central",
-          status: "synced",
-          latencyMs: 12,
-          rls: "Ativo & Isolado"
+          status: "warning",
+          latencyMs: totalLatency,
+          rls: "Não verificado"
         },
         workshops: {
           name: "Rede de Centros Automotivos",
-          status: "synced",
+          status: "warning",
           activeCount: 0,
-          latencyMs: 14
+          latencyMs: totalLatency
         },
         customers: {
           name: "Motoristas & Catálogo de Benefícios",
-          status: "synced",
+          status: "warning",
           activeCount: 0,
-          benefitsCount: 4
+          benefitsCount: 0
         }
       }
     };

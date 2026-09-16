@@ -18,5 +18,21 @@ export function createServerAdminClient(supabaseUrl: string, serviceRoleKey: str
   });
 }
 
+export function createRequestClient(
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  accessToken?: string
+): SupabaseClient {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    },
+    global: accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : undefined
+  });
+}
+
 export { SupabaseClient };
-export * from "./workshops-store";

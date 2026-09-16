@@ -4,26 +4,38 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileButton, MobileInput } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
+import { ApiClientError } from "@grupo-j/api-client";
+import { useAuth } from "../../providers/AuthProvider";
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { signIn } = useAuth();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setError("");
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await signIn(email, password);
       router.replace("/(app)/inicio");
-    }, 600);
+    } catch (cause) {
+      setError(cause instanceof ApiClientError ? cause.message : "Não foi possível entrar. Confira sua conexão.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.logoBadge}>
+          <Text style={styles.logoText}>J</Text>
+        </View>
         <Text style={styles.title}>Bem-vindo de volta</Text>
-        <Text style={styles.subtitle}>Acesse sua assinatura automotiva</Text>
+        <Text style={styles.subtitle}>Entre para acessar sua assinatura e seus benefícios automotivos.</Text>
       </View>
 
       <View style={styles.form}>
@@ -42,6 +54,7 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
         />
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <TouchableOpacity
           style={styles.forgotPassword}
@@ -61,10 +74,13 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Ainda não é assinante? </Text>
-        <TouchableOpacity onPress={() => router.push("/(auth)/cadastro")}>
-          <Text style={styles.footerLink}>Cadastre-se</Text>
-        </TouchableOpacity>
+        <Text style={styles.planPrice}>Plano Motorista • R$ 50,00/mês</Text>
+        <View style={styles.signupRow}>
+          <Text style={styles.footerText}>Ainda não é assinante? </Text>
+          <TouchableOpacity onPress={() => router.push("/(auth)/cadastro")}>
+            <Text style={styles.footerLink}>Cadastre-se</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -78,7 +94,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between"
   },
   header: {
-    marginTop: 20
+    marginTop: 20,
+    alignItems: "center"
+  },
+  logoBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: tokens.colors.brand.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18
+  },
+  logoText: {
+    color: "#FFFFFF",
+    fontSize: 32,
+    fontWeight: "800"
   },
   title: {
     fontSize: 26,
@@ -88,7 +119,9 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: tokens.colors.text.secondary,
-    marginTop: 4
+    marginTop: 6,
+    textAlign: "center",
+    lineHeight: 20
   },
   form: {
     width: "100%",
@@ -99,16 +132,30 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 16
   },
+  errorText: {
+    color: tokens.colors.status.danger,
+    fontSize: 13,
+    marginTop: 8
+  },
   forgotPasswordText: {
     fontSize: 13,
     color: tokens.colors.brand.primary,
     fontWeight: "600"
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
     paddingBottom: 16
+  },
+  planPrice: {
+    fontSize: 14,
+    color: tokens.colors.text.primary,
+    fontWeight: "700",
+    marginBottom: 12
+  },
+  signupRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center"
   },
   footerText: {
     fontSize: 14,

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Download, FileSpreadsheet, CheckCircle2, DollarSign, Wrench, BarChart3 } from "@grupo-j/ui-web";
+import { Button, Download, FileSpreadsheet, CheckCircle2, Wrench, BarChart3 } from "@grupo-j/ui-web";
 import type { ServiceRow } from "@/lib/queries";
-import { formatCents, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 
 interface Props {
   services: ServiceRow[];
@@ -13,7 +13,6 @@ export function RelatoriosClient({ services }: Props) {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   const totalAtendimentos = services.length;
-  const totalRepasseCents = totalAtendimentos * 5000; // R$ 50,00 por atendimento preventivo fixo
 
   const handleDownloadCSV = () => {
     const headers = [
@@ -24,7 +23,6 @@ export function RelatoriosClient({ services }: Props) {
       "Placa do Veiculo",
       "Modelo",
       "Servico Preventivo",
-      "Repasse Grupo J (R$)",
       "Status"
     ];
 
@@ -36,7 +34,6 @@ export function RelatoriosClient({ services }: Props) {
       s.vehicle?.plate || "—",
       s.vehicle ? `${s.vehicle.brand} ${s.vehicle.model}` : "—",
       s.benefit?.name || "Serviço Preventivo",
-      "50.00",
       s.status
     ]);
 
@@ -86,7 +83,7 @@ export function RelatoriosClient({ services }: Props) {
       )}
 
       {/* Cards de Métricas Reais */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#034EFE] flex items-center justify-center shrink-0">
             <Wrench size={22} />
@@ -99,24 +96,13 @@ export function RelatoriosClient({ services }: Props) {
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <DollarSign size={22} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Repasses Totais</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">{formatCents(totalRepasseCents)}</p>
-            <span className="text-[11px] text-emerald-700 font-semibold">R$ 50,00 por procedimento</span>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
             <BarChart3 size={22} />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Auditoria Fiscal</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">100%</p>
-            <span className="text-[11px] text-indigo-700 font-semibold">Integridade garantida</span>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Registros no relatório</p>
+            <p className="text-2xl font-black text-slate-900 mt-0.5">{services.length}</p>
+            <span className="text-[11px] text-indigo-700 font-semibold">Dados consultados no sistema</span>
           </div>
         </div>
       </div>

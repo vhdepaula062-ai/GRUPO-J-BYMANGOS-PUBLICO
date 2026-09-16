@@ -1,80 +1,20 @@
 import { NextRequest } from "next/server";
-import { createSuccessResponse, createProblemResponse } from "@/lib/response";
-import { BenefitRedemptionValidator, DomainError } from "@grupo-j/domain";
-import { Entitlement, BenefitDefinition } from "@grupo-j/types";
+import { authenticateRequest, getCustomerId, isAuthFailure } from "@/lib/auth";
+import { createProblemResponse, createSuccessResponse } from "@/lib/response";
 
 export const dynamic = "force-dynamic";
-
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { voucherToken, workshopId, vehiclePlate } = body;
-
-    if (!voucherToken || !workshopId || !vehiclePlate) {
-      return createProblemResponse({
-        type: "https://api.grupoj.com.br/v1/errors/missing-parameters",
-        title: "Parâmetros obrigatórios ausentes",
-        status: 400,
-        detail: "Voucher token, oficina e placa do veículo são obrigatórios para validação."
-      });
-    }
-
-    const mockEntitlement: Entitlement = {
-      id: "ent-123",
-      customerId: "cust-123",
-      benefitDefinitionId: "ben-123",
-      cycleStart: "2026-01-01T00:00:00Z",
-      cycleEnd: "2026-06-30T23:59:59Z",
-      totalQuantity: 2,
-      usedQuantity: 0,
-      availableQuantity: 2
-    };
-
-    const mockBenefit: BenefitDefinition = {
-      id: "ben-123",
-      name: "Alinhamento 3D e Balanceamento",
-      slug: "alinhamento-balanceamento",
-      description: "Alinhamento e balanceamento preventivo",
-      periodicity: "semiannual",
-      quantityPerCycle: 2,
-      gracePeriodDays: 0,
-      isIncludedInBasePlan: true,
-      isActive: true
-    };
-
-    // Executa validação pelo motor de domínio
-    BenefitRedemptionValidator.validate({
-      subscriptionStatus: "active",
-      subscriptionStartedAt: "2026-01-01T00:00:00Z",
-      entitlement: mockEntitlement,
-      benefitDefinition: mockBenefit,
-      assignedWorkshopId: workshopId,
-      redemptionWorkshopId: workshopId
-    });
-
-    return createSuccessResponse({
-      valid: true,
-      benefit: mockBenefit.name,
-      availableQuantityAfter: mockEntitlement.availableQuantity - 1,
-      vehiclePlate,
-      authorizedAt: new Date().toISOString()
-    });
-  } catch (err) {
-    if (err instanceof DomainError) {
-      return createProblemResponse({
-        type: `https://api.grupoj.com.br/v1/errors/${err.code.toLowerCase()}`,
-        title: "Validação de Benefício Recusada",
-        status: err.statusCode,
-        code: err.code,
-        detail: err.message
-      });
-    }
-
-    return createProblemResponse({
-      type: "https://api.grupoj.com.br/v1/errors/internal",
-      title: "Erro interno",
-      status: 500,
-      detail: err instanceof Error ? err.message : "Erro desconhecido"
-    });
-  }
+  const auth = await authenticateRequest(request); if (isAuthFailure(auth)) return auth;
+  const body = await request.json();
+  if (!body.benefitDefinitionId || !body.workshopId) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/validation-error", title: "Dados incompletos", status: 422, detail: "Benefício e oficina são obrigatórios." });
+  const customerId = await getCustomerId(auth.db, auth.user.id);
+  const [{ data: customer }, { data: subscription }, { data: entitlement }] = await Promise.all([
+    auth.db.from("customers").select("assigned_workshop_id").eq("id", customerId).single(),
+    auth.db.from("subscriptions").select("status, current_period_end").eq("customer_id", customerId).eq("status", "active").gt("current_period_end", new Date().toISOString()).maybeSingle(),
+    auth.db.from("entitlements").select("available_quantity, benefit:benefit_definitions(name, grace_period_days)").eq("customer_id", customerId).eq("benefit_definition_id", body.benefitDefinitionId).gt("available_quantity", 0).maybeSingle()
+  ]);
+  if (customer?.assigned_workshop_id !== body.workshopId) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/workshop-mismatch", title: "Oficina não vinculada", status: 403, detail: "O benefício só pode ser usado na oficina vinculada." });
+  if (!subscription) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/subscription-inactive", title: "Assinatura inativa", status: 403, detail: "Regularize a assinatura para usar benefícios." });
+  if (!entitlement) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/no-balance", title: "Benefício indisponível", status: 422, detail: "Não há saldo deste benefício no ciclo atual." });
+  return createSuccessResponse({ eligible: true, availableQuantity: entitlement.available_quantity, benefit: entitlement.benefit });
 }

@@ -2,7 +2,7 @@
   "name": "customer-mobile",
   "version": "0.1.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "dev": "expo start",
@@ -18,11 +18,14 @@
     "@grupo-j/types": "workspace:*",
     "@grupo-j/ui-mobile": "workspace:*",
     "@grupo-j/validation": "workspace:*",
-    "@grupo-j/test-utils": "workspace:*",
+    "@expo/vector-icons": "^14.0.4",
+    "@babel/runtime": "^7.26.0",
     "expo": "~52.0.35",
+    "expo-asset": "~11.0.3",
     "expo-constants": "~17.0.7",
     "expo-linking": "~7.0.5",
     "expo-router": "~4.0.17",
+    "expo-secure-store": "~14.0.1",
     "expo-status-bar": "~2.0.1",
     "react": "18.3.1",
     "react-native": "0.76.7",
@@ -32,6 +35,8 @@
   "devDependencies": {
     "@grupo-j/eslint-config": "workspace:*",
     "@grupo-j/typescript-config": "workspace:*",
+    "@react-native/codegen": "0.76.7",
+    "@react-native/gradle-plugin": "0.76.7",
     "@types/react": "~18.3.12",
     "typescript": "^5.7.3"
   }

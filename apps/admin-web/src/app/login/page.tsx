@@ -33,25 +33,17 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     setError(null);
 
-    const supabase = createClient();
-
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password
-    });
+    let authError;
+    try {
+      const supabase = createClient();
+      ({ error: authError } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password }));
+    } catch {
+      setIsLoading(false);
+      setError("Serviço de autenticação não configurado ou indisponível.");
+      return;
+    }
 
     if (authError) {
-      const isPlaceholder = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-        process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
-        authError.message.includes("Failed to fetch") ||
-        authError.message.includes("NetworkError");
-
-      if (isPlaceholder) {
-        router.push("/dashboard");
-        router.refresh();
-        return;
-      }
-
       setIsLoading(false);
       // Traduzir erros do Supabase para português
       if (authError.message.includes("Invalid login credentials")) {

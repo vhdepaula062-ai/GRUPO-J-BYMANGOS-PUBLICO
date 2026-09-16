@@ -1,0 +1,192 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Grupo J - API Central Unificada",
+    "description": "Especificação oficial da API central do ecossistema Grupo J. Fonte única confiável de dados para os portais Web PWA e aplicativo mobile dos motoristas.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Engenharia de Software Grupo J",
+      "email": "dev@grupoj.com.br"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.grupoj.com.br/v1",
+      "description": "Produção Oficial"
+    },
+    {
+      "url": "https://staging-api.grupoj.com.br/v1",
+      "description": "Homologação / Staging"
+    },
+    {
+      "url": "http://localhost:3002/api/v1",
+      "description": "Ambiente Local de Desenvolvimento"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Cadastro de novo motorista",
+        "description": "Registra motorista com CPF validado e termo de consentimento LGPD.",
+        "responses": {
+          "201": { "description": "Motorista cadastrado com sucesso" },
+          "422": { "description": "Erro de validação ou CPF inválido" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Autenticação no ecossistema",
+        "description": "Login com e-mail ou CPF e senha, retornando token e roles.",
+        "responses": {
+          "200": { "description": "Autenticado com sucesso" },
+          "400": { "description": "Credenciais inválidas" }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Renovação segura de sessão",
+        "responses": {
+          "200": { "description": "Token renovado" },
+          "401": { "description": "Sessão expirada" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Revogação de sessão ativa",
+        "responses": {
+          "200": { "description": "Desconectado" }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "summary": "Perfil completo do usuário autenticado",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Dados do usuário, assinatura e veículo" }
+        }
+      },
+      "delete": {
+        "summary": "Solicitação de exclusão de conta (LGPD)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Exclusão agendada" }
+        }
+      }
+    },
+    "/vehicles": {
+      "get": {
+        "summary": "Listagem de veículos do motorista",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Lista de veículos" } }
+      },
+      "post": {
+        "summary": "Cadastro de novo veículo",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Veículo cadastrado" } }
+      }
+    },
+    "/vehicles/{id}": {
+      "patch": {
+        "summary": "Atualização de dados do veículo",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Veículo atualizado" } }
+      }
+    },
+    "/workshops": {
+      "get": {
+        "summary": "Listagem de oficinas credenciadas",
+        "responses": { "200": { "description": "Lista de centros automotivos" } }
+      }
+    },
+    "/workshops/{id}": {
+      "get": {
+        "summary": "Detalhes de uma oficina credenciada",
+        "responses": { "200": { "description": "Dados da oficina" } }
+      }
+    },
+    "/workshops/change-request": {
+      "post": {
+        "summary": "Solicitação de troca de oficina de referência",
+        "description": "Valida estritamente no backend a regra inegociável de 30 dias de carência entre trocas.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Oficina alterada com sucesso" },
+          "422": { "description": "Bloqueado por carência de 30 dias" }
+        }
+      }
+    },
+    "/subscriptions/current": {
+      "get": {
+        "summary": "Status da assinatura mensal de R$ 50/mês",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Dados da assinatura ativa" } }
+      }
+    },
+    "/payments": {
+      "get": {
+        "summary": "Histórico de faturas e pagamentos recorrentes",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Histórico de pagamentos" } }
+      }
+    },
+    "/benefits": {
+      "get": {
+        "summary": "Serviços inclusos no plano (Alinhamento, Balanceamento, Ar e Rodízio)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Serviços e cotas" } }
+      }
+    },
+    "/promotions": {
+      "get": {
+        "summary": "Promoções ativas das oficinas",
+        "description": "Filtra automaticamente promoções expiradas e atribui a oficina ofertante.",
+        "responses": { "200": { "description": "Lista de promoções válidas" } }
+      }
+    },
+    "/service-orders": {
+      "get": {
+        "summary": "Ordens de serviço preventivo",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "200": { "description": "Lista de ordens de serviço" } }
+      },
+      "post": {
+        "summary": "Abertura de ordem de serviço para um dos 4 benefícios",
+        "security": [{ "BearerAuth": [] }],
+        "responses": { "201": { "description": "Ordem de serviço criada" } }
+      }
+    },
+    "/vouchers/validate": {
+      "post": {
+        "summary": "Validação de voucher/QR Code na oficina",
+        "description": "Validação com verificação de assinatura e proteção anti-replay contra reutilização de vouchers.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Voucher validado e resgatado" },
+          "409": { "description": "Voucher já utilizado anteriormente" },
+          "422": { "description": "Assinatura digital inválida" }
+        }
+      }
+    },
+    "/webhooks/payment-provider": {
+      "post": {
+        "summary": "Webhook de eventos de pagamento do gateway",
+        "responses": {
+          "200": { "description": "Evento processado" }
+        }
+      }
+    }
+  }
+}

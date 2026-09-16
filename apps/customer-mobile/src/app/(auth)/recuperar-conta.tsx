@@ -4,11 +4,18 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileButton, MobileInput } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
+import { api } from "../../lib/api";
 
 export default function RecuperarContaScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const sendRecovery = async () => {
+    setError("");
+    try { await api.post("/api/v1/auth/recover", { email }); setSent(true); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Não foi possível enviar as instruções."); }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -48,8 +55,9 @@ export default function RecuperarContaScreen() {
               label="Enviar Link de Recuperação"
               variant="primary"
               size="lg"
-              onPress={() => setSent(true)}
+              onPress={() => void sendRecovery()}
             />
+            {error ? <Text style={{ color: tokens.colors.status.danger, marginTop: 8 }}>{error}</Text> : null}
           </>
         )}
       </View>

@@ -1,26 +1,37 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
-import { mockCustomer } from "@grupo-j/test-utils";
 import { tokens } from "@grupo-j/design-tokens";
+import { api } from "../../lib/api";
+import { useApiResource } from "../../hooks/useApiResource";
+import { useAuth } from "../../providers/AuthProvider";
+
+type ProfileData = { profile: { full_name: string; email: string; cpf_masked: string | null; phone: string | null }; subscriptions: Array<{ status: string; plan: { name: string; price_cents: number } }> };
 
 export default function PerfilScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
+  const load = useCallback(() => api.getMe<ProfileData>(), []);
+  const { data, loading, error } = useApiResource(load);
 
   const handleDeleteAccount = () => {
     Alert.alert(
       "Excluir Minha Conta",
-      "Tem certeza que deseja solicitar a exclusão da sua conta e dados pessoais? Esta ação cancelará sua assinatura ativa imediatamente de acordo com a LGPD e as diretrizes das lojas.",
+      "Tem certeza que deseja solicitar a exclusão da sua conta e dados pessoais? A solicitação será analisada conforme a LGPD e as regras de retenção obrigatória.",
       [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Confirmar Exclusão",
           style: "destructive",
-          onPress: () => {
-            Alert.alert("Solicitação Registrada", "Sua conta foi programada para exclusão e sua assinatura cancelada.");
-            router.replace("/(auth)/login");
+          onPress: async () => {
+            try {
+              const response = await api.deleteMyAccount<{ protocol: string; deadline_at: string }>();
+              Alert.alert("Solicitação registrada", `Protocolo ${response.data.protocol}. O pedido será tratado até ${new Date(response.data.deadline_at).toLocaleDateString("pt-BR")}.`);
+            } catch {
+              Alert.alert("Não foi possível registrar", "Tente novamente quando estiver conectado.");
+            }
           }
         }
       ]
@@ -34,25 +45,28 @@ export default function PerfilScreen() {
           <Text style={styles.title}>Meu Perfil</Text>
           <Text style={styles.subtitle}>Dados cadastrais, assinatura e privacidade LGPD</Text>
         </View>
+        {loading ? <ActivityIndicator /> : null}
+        {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
+        {data ? <>
 
         {/* Dados Pessoais com CPF Mascarado */}
         <MobileCard>
           <Text style={styles.cardSectionTitle}>Dados Pessoais</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Nome:</Text>
-            <Text style={styles.infoValue}>{mockCustomer.fullName}</Text>
+            <Text style={styles.infoValue}>{data.profile.full_name}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>E-mail:</Text>
-            <Text style={styles.infoValue}>{mockCustomer.email}</Text>
+            <Text style={styles.infoValue}>{data.profile.email}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>CPF (LGPD):</Text>
-            <Text style={styles.infoValue}>{mockCustomer.cpfMasked}</Text>
+            <Text style={styles.infoValue}>{data.profile.cpf_masked ?? "Não informado"}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Celular:</Text>
-            <Text style={styles.infoValue}>{mockCustomer.phone}</Text>
+            <Text style={styles.infoValue}>{data.profile.phone ?? "Não informado"}</Text>
           </View>
         </MobileCard>
 
@@ -60,22 +74,15 @@ export default function PerfilScreen() {
         <MobileCard>
           <View style={styles.subHeader}>
             <Text style={styles.cardSectionTitle}>Assinatura Mensal</Text>
-            <MobileBadge label="R$ 50/mês" variant="success" />
+            <MobileBadge label={data.subscriptions?.[0]?.status === "active" ? "Ativa" : "Pendente"} variant={data.subscriptions?.[0]?.status === "active" ? "success" : "warning"} />
           </View>
-          <Text style={styles.subDesc}>Plano Motorista Grupo J • Renovação recorrente</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Forma de Pagamento:</Text>
-            <Text style={styles.infoValue}>Cartão de Crédito (final 1234)</Text>
-          </View>
+          <Text style={styles.subDesc}>{data.subscriptions?.[0]?.plan?.name ?? "Nenhuma assinatura contratada"}</Text>
         </MobileCard>
+        </> : null}
 
         {/* Conformidade e Privacidade LGPD / App Store */}
         <MobileCard>
           <Text style={styles.cardSectionTitle}>Privacidade e Governança</Text>
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert("Exportação de Dados", "Um arquivo JSON com seus dados cadastrais foi enviado para seu e-mail.")}>
-            <Text style={styles.menuItemText}>📄 Exportar meus dados cadastrais (LGPD Art. 18)</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push("/(app)/historico")}>
             <Text style={styles.menuItemText}>🔧 Histórico completo de manutenções</Text>
           </TouchableOpacity>
@@ -94,7 +101,7 @@ export default function PerfilScreen() {
         <MobileButton
           label="Sair da Conta"
           variant="outline"
-          onPress={() => router.replace("/(auth)/login")}
+          onPress={async () => { await signOut(); router.replace("/(auth)/login"); }}
         />
       </ScrollView>
     </SafeAreaView>
