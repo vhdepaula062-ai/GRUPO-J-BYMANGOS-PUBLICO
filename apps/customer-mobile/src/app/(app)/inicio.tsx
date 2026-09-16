@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
@@ -16,8 +16,12 @@ type HomeData = {
 
 export default function InicioScreen() {
   const router = useRouter();
-  const load = useCallback(() => api.getMe<HomeData>(), []);
-  const { data, loading, error } = useApiResource(load);
+  const loadHome = useCallback(() => api.getMe<HomeData>(), []);
+  const loadPromos = useCallback(() => api.getPromotions<Array<{ id: string; title: string; description: string; image_url?: string | null; discount_percentage: number | null; workshop: { trade_name: string } }>>(), []);
+
+  const { data, loading, error } = useApiResource(loadHome);
+  const { data: promotions } = useApiResource(loadPromos);
+
   if (loading) return <SafeAreaView style={styles.container}><ActivityIndicator style={{ marginTop: 48 }} /></SafeAreaView>;
   if (error || !data) return <SafeAreaView style={styles.container}><Text style={{ padding: 20, color: tokens.colors.status.danger }}>{error ?? "Dados indisponíveis"}</Text></SafeAreaView>;
   const subscription = data.subscriptions?.[0];
@@ -52,6 +56,48 @@ export default function InicioScreen() {
           />
         </View>
 
+        {/* Seção de Ofertas & Promoções em Destaque na Home */}
+        {promotions && promotions.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Ofertas & Descontos Exclusivos</Text>
+              <TouchableOpacity onPress={() => router.push("/(app)/promocoes")}>
+                <Text style={styles.seeAllLink}>Ver todas →</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 4 }}>
+              {promotions.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.promoHomeCard}
+                  activeOpacity={0.85}
+                  onPress={() => router.push("/(app)/promocoes")}
+                >
+                  {p.image_url ? (
+                    <View style={styles.promoHomeImageContainer}>
+                      <Image source={{ uri: p.image_url }} style={styles.promoHomeImage} resizeMode="cover" />
+                      {p.discount_percentage ? (
+                        <View style={styles.promoHomeBadge}>
+                          <Text style={styles.promoHomeBadgeText}>{p.discount_percentage}% OFF</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : null}
+                  <View style={{ padding: 12 }}>
+                    <Text style={styles.promoHomeWorkshop} numberOfLines={1}>
+                      {p.workshop?.trade_name ?? "Oficina Credenciada"}
+                    </Text>
+                    <Text style={styles.promoHomeTitle} numberOfLines={2}>
+                      {p.title}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Card da Oficina Vinculada */}
         <Text style={styles.sectionTitle}>Sua Oficina de Referência</Text>
         <MobileCard>
@@ -64,14 +110,14 @@ export default function InicioScreen() {
               <Text style={styles.workshopAddress}>
                 {unit ? `${unit.address_street}, ${unit.address_number} — ${unit.address_neighborhood}` : "Nenhuma oficina vinculada"}
               </Text>
-              {workshopProfile ? <Text style={styles.workshopRating}>★ {workshopProfile.rating_average} ({workshopProfile.rating_count} avaliações)</Text> : null}
+              {workshopProfile?.rating_count ? (
+                <Text style={styles.workshopRating}>⭐ {workshopProfile.rating_average.toFixed(1)} ({workshopProfile.rating_count} avaliações)</Text>
+              ) : null}
             </View>
           </View>
-          <View style={styles.workshopCardFooter}>
-            <TouchableOpacity onPress={() => router.push("/(app)/oficinas")}>
-              <Text style={styles.changeWorkshopLink}>Trocar oficina de referência →</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.workshopCardFooter} onPress={() => router.push("/(app)/oficinas")}>
+            <Text style={styles.changeWorkshopLink}>Trocar oficina de referência →</Text>
+          </TouchableOpacity>
         </MobileCard>
 
         {/* Card do Veículo */}
@@ -142,6 +188,68 @@ const styles = StyleSheet.create({
     color: tokens.colors.text.primary,
     marginBottom: 8,
     marginTop: 12
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    marginTop: 12
+  },
+  seeAllLink: {
+    fontSize: 12,
+    color: tokens.colors.brand.primary,
+    fontWeight: "700"
+  },
+  promoHomeCard: {
+    width: 220,
+    backgroundColor: tokens.colors.surface.default,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: tokens.colors.border.subtle,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  promoHomeImageContainer: {
+    width: "100%",
+    height: 110,
+    backgroundColor: tokens.colors.surface.subtle,
+    position: "relative"
+  },
+  promoHomeImage: {
+    width: "100%",
+    height: "100%"
+  },
+  promoHomeBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: tokens.colors.status.danger,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8
+  },
+  promoHomeBadgeText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "800"
+  },
+  promoHomeWorkshop: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: tokens.colors.brand.primary,
+    textTransform: "uppercase"
+  },
+  promoHomeTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: tokens.colors.text.primary,
+    marginTop: 2,
+    lineHeight: 16
   },
   workshopCardContent: {
     flexDirection: "row",

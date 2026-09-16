@@ -8,7 +8,39 @@ export async function GET(request: NextRequest) {
   const customerId = await getCustomerId(auth.db, auth.user.id);
   const { data, error } = await auth.db.from("entitlements").select("id, total_quantity, used_quantity, available_quantity, benefit:benefit_definitions(id, name, slug, description, periodicity, grace_period_days), cycle:entitlement_cycles(cycle_start, cycle_end)").eq("customer_id", customerId);
   if (error) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/query-failed", title: "Benefícios indisponíveis", status: 503, detail: error.message });
-  return createSuccessResponse(data ?? []);
+
+  if (data && data.length > 0) {
+    return createSuccessResponse(data);
+  }
+
+  // Se o cliente ainda não ativou a assinatura ou não gerou o ciclo de entitlements,
+  // exibe o catálogo completo dos benefícios do plano preventivo Grupo J
+  const { data: catalog, error: catalogError } = await auth.db
+    .from("benefit_definitions")
+    .select("id, name, slug, description, periodicity, quantity_per_cycle")
+    .eq("is_included_in_base_plan", true)
+    .eq("is_active", true)
+    .order("name");
+
+  if (catalogError) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/query-failed", title: "Benefícios indisponíveis", status: 503, detail: catalogError.message });
+
+  const fallbackEntitlements = (catalog ?? []).map(b => ({
+    id: `cat-${b.id}`,
+    total_quantity: b.quantity_per_cycle ?? 1,
+    used_quantity: 0,
+    available_quantity: b.quantity_per_cycle ?? 1,
+    benefit: {
+      id: b.id,
+      name: b.name,
+      slug: b.slug,
+      description: b.description,
+      periodicity: b.periodicity,
+      grace_period_days: 0
+    },
+    cycle: null
+  }));
+
+  return createSuccessResponse(fallbackEntitlements);
 }
 
 export async function POST(request: NextRequest) {
