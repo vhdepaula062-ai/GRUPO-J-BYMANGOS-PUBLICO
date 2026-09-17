@@ -75,6 +75,15 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   const testWorkshop2Cnpj = generateValidCnpj();
   const driverEmail = `homolog.driver1.${Date.now()}@grupoj-test.local`;
   const driverPassword = "SenhaSegura123!";
+  const allowWrites = process.env.ALLOW_TEST_WRITES === "true";
+
+  function guardTestExecution(): boolean {
+    if (!allowWrites) {
+      console.warn("-> [PROTEÇÃO ATIVA] Teste suspenso por segurança: ALLOW_TEST_WRITES !== 'true'.");
+      return true;
+    }
+    return false;
+  }
 
   beforeAll(async () => {
     // 1. Carrega configurações do .env raiz
@@ -87,6 +96,18 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
         const v = line.substring(idx + 1).trim().replace(/^['"]|['"]$/g, "");
         process.env[k] = v;
       }
+    }
+
+    if (!allowWrites) {
+      console.warn(
+        "\n================================================================================\n" +
+        "[SAFETY GUARD] HOMOLOGAÇÃO INTEGRADA: ESCRITAS SUSPENSAS POR SEGURANÇA\n" +
+        "Motivo: Banco exclusivo de testes não configurado no ambiente.\n" +
+        "Garantia: Nenhuma escrita, alteração ou exclusão será realizada no banco.\n" +
+        "Para autorizar execuções com limpeza restrita a IDs sintéticos, defina ALLOW_TEST_WRITES=true.\n" +
+        "================================================================================\n"
+      );
+      return;
     }
 
     supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -105,6 +126,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   });
 
   afterAll(async () => {
+    if (!allowWrites) return;
     // Teardown / Cleanup controlado: remove apenas os dados sintéticos criados com [HOMOLOG-TEST]
     try {
       console.log("\n[CLEANUP] Iniciando limpeza controlada de dados sintéticos de homologação...");
@@ -161,6 +183,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 1 — ADMIN CADASTRA OU APROVA OFICINA
   // =========================================================================
   it("PASSO 1: Admin cadastra/aprova oficinas parceiras e vincula responsável", async () => {
+    if (guardTestExecution()) return;
     const ownerEmail = `homolog.owner.alpha.${Date.now()}@grupoj-test.local`;
     const { data: ownerUser, error: ownerUserErr } = await db.auth.admin.createUser({
       email: ownerEmail,
@@ -239,6 +262,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 2 — RESPONSÁVEL ENTRA NO PORTAL DA OFICINA & TESTE MULTI-TENANT RLS
   // =========================================================================
   it("PASSO 2: Responsável acessa a sua oficina e isolamento multi-tenant impede ver dados de outras oficinas", async () => {
+    if (guardTestExecution()) return;
     const { data: membership, error: memErr } = await db
       .from("organization_members")
       .select("organization_id, role, organization:organizations(id, trade_name, status)")
@@ -266,6 +290,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 3 — CLIENTE CRIA CONTA PELO APK
   // =========================================================================
   it("PASSO 3: Cliente cria conta via endpoint, valida LGPD/CPF e efetua login", async () => {
+    if (guardTestExecution()) return;
     const invalidReq = new NextRequest("http://localhost:3002/api/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -363,6 +388,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 4 — CLIENTE CADASTRA VEÍCULO E ESCOLHE OFICINA (+ REGRA 30 DIAS)
   // =========================================================================
   it("PASSO 4: Cliente cadastra veículo e vincula oficina; regra dos 30 dias bloqueia troca antecipada", async () => {
+    if (guardTestExecution()) return;
     // 1. Cadastra veículo
     const vehicleReq = new NextRequest("http://localhost:3002/api/v1/vehicles", {
       method: "POST",
@@ -430,6 +456,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 5 — CLIENTE SOLICITA BENEFÍCIO E RECEBE VOUCHER (+ BLOQUEIO INELEGÍVEL)
   // =========================================================================
   it("PASSO 5: Concessão de assinatura de homologação e validação de elegibilidade com bloqueio de inelegível", async () => {
+    if (guardTestExecution()) return;
     // 1. Busca definição de benefício preventivo
     const { data: benefitDef } = await db
       .from("benefit_definitions")
@@ -521,6 +548,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 6 — CLIENTE GERA VOUCHER DE BENEFÍCIO (+ TOKEN IMPREVISÍVEL)
   // =========================================================================
   it("PASSO 6: Cliente solicita benefício preventivo e obtém voucher com código imprevisível", async () => {
+    if (guardTestExecution()) return;
     const voucherReq = new NextRequest("http://localhost:3002/api/v1/benefits", {
       method: "POST",
       headers: {
@@ -551,6 +579,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 7 — OFICINA VALIDA VOUCHER E CONSUMO ATÔMICO/CONCORRENTE
   // =========================================================================
   it("PASSO 7: Oficina valida voucher no check-in, impede reuso e garante consumo atômico", async () => {
+    if (guardTestExecution()) return;
     // 1. Validação regular pela Oficina Alpha
     const { error: redeemErr } = await db
       .from("benefit_redemptions")
@@ -618,6 +647,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 8 — HISTÓRICO APARECE NO APP E NO ADMIN
   // =========================================================================
   it("PASSO 8: Histórico reflete atendimento concluído no app e feed de visitas do admin", async () => {
+    if (guardTestExecution()) return;
     // 1. Histórico do cliente
     const { data: driverHistory, error: hErr } = await db
       .from("benefit_redemptions")
@@ -656,6 +686,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // PASSO 9 — OFICINA PUBLICA PROMOÇÃO E ELA APARECE NO APP
   // =========================================================================
   it("PASSO 9: Oficina submete promoção, Admin aprova e promoção aparece pública no catálogo", async () => {
+    if (guardTestExecution()) return;
     const today = new Date().toISOString().slice(0, 10);
     const futureDate = new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10);
 
@@ -707,6 +738,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // FECHAR E REABRIR OS SISTEMAS: RENOVAÇÃO DE SESSÃO & LOGOUT
   // =========================================================================
   it("SISTEMA & SESSÃO: Renovação segura de tokens via refresh e encerramento limpo de sessão via logout", async () => {
+    if (guardTestExecution()) return;
     // 1. Renovação via Refresh Token
     const refreshReq = new NextRequest("http://localhost:3002/api/v1/auth/refresh", {
       method: "POST",
@@ -737,6 +769,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // TESTES TRANSVERSAIS DE SEGURANÇA
   // =========================================================================
   it("SEGURANÇA TRANSVERSAL: RLS Multi-Tenant, Imutabilidade de Auditoria e Proteção contra Elevação de Privilégios", async () => {
+    if (guardTestExecution()) return;
     // 1. Multi-tenant RLS: Oficina Beta tentando atualizar voucher da Oficina Alpha
     const { data: foreignUpdate } = await db
       .from("benefit_redemptions")
@@ -782,6 +815,7 @@ describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   // EXCLUSÃO DE CONTA (LGPD)
   // =========================================================================
   it("EXCLUSÃO DE CONTA (LGPD): Solicitação no app com protocolo formal e rotina de expurgo em cascata", async () => {
+    if (guardTestExecution()) return;
     // 1. Motorista solicita exclusão via endpoint DELETE /api/v1/me
     const delMeReq = new NextRequest("http://localhost:3002/api/v1/me", {
       method: "DELETE",
