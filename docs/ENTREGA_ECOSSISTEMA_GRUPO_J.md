@@ -24,6 +24,8 @@ Todos os três serviços foram publicados nos projetos Vercel existentes, com do
 ### Commits desta Tarefa:
 - **`728af7e`**: `fix(security): endurecer autorizacao, eliminar fallbacks multi-tenant e validar titularidade de veiculos`
 - **`2cf2825`**: `test(safety): adicionar guardrail contra escritas acidentais em banco nao isolado`
+- **`ce3f9e4`**: `docs(entrega): registrar homologacao, deployments e instrucoes do ecossistema grupo j`
+- **`cc69d97`**: `fix(auth): suportar roles platform_admin e platform_owner no layout do backoffice admin`
 
 ### Deployments Vercel em Produção:
 1. **API (`apps/api` -> `grupo-j-api`)**:
@@ -33,10 +35,10 @@ Todos os três serviços foram publicados nos projetos Vercel existentes, com do
    - **Verificação de Saúde:** `{"status":"healthy","version":"0.2.0","database":"up","storage":"up"}`
 
 2. **SaaS Admin (`apps/admin-web` -> `grupo-j-admin`)**:
-   - **Deployment ID:** `dpl_DrtxdhwCLWDhk7fHS5PGkXY6Ty7F`
-   - **URL Imutável:** `https://grupo-j-admin-hnz7lk7y5-vhdepaula062-1705s-projects.vercel.app`
+   - **Deployment ID:** `dpl_5P7YqXU5GWfUuCbP4eh3XUjPz1CV`
+   - **URL Imutável:** `https://grupo-j-admin-7rjbqufsb-vhdepaula062-1705s-projects.vercel.app`
    - **Alias Canônico:** `https://grupo-j-admin.vercel.app`
-   - **Verificação de Rota:** `/login` responde 200 OK; rotas protegidas `/dashboard` redirecionam 307 para login com `redirect=%2Fdashboard`.
+   - **Verificação de Rota:** `/login` e `/dashboard` testados e validados com sucesso em produção ao vivo.
 
 3. **Portal Oficinas (`apps/workshop-web` -> `grupo-j-oficinas`)**:
    - **Deployment ID:** `dpl_AANxoELJWUZ3UtYqRWzPvKN3iouZ`
