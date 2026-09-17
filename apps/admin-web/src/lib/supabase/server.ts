@@ -53,20 +53,38 @@ export async function checkIsAdmin(): Promise<boolean> {
   const user = await getAuthenticatedUser();
   if (!user) return false;
 
-  if (user.app_metadata?.role === "admin" || user.user_metadata?.account_type === "admin") {
+  const appRole = user.app_metadata?.role;
+  const userRoleMeta = user.user_metadata?.account_type || user.user_metadata?.role;
+
+  const validRoles = ["admin", "platform_admin", "platform_owner", "super_admin"];
+  if (
+    (typeof appRole === "string" && validRoles.includes(appRole)) ||
+    (typeof userRoleMeta === "string" && validRoles.includes(userRoleMeta))
+  ) {
     return true;
   }
 
   try {
     const supabase = createServerSupabaseClient();
-    const { data: userRole } = await supabase
+    const { data: userRoles } = await supabase
       .from("user_roles")
-      .select("role:roles!inner(name)")
-      .eq("user_id", user.id)
-      .eq("roles.name", "admin")
-      .maybeSingle();
+      .select("role:roles!inner(code, name)")
+      .eq("user_id", user.id);
 
-    if (userRole) return true;
+    if (userRoles && userRoles.length > 0) {
+      const isAdminRole = userRoles.some((ur: any) => {
+        const code = ur.role?.code;
+        const name = ur.role?.name;
+        return (
+          validRoles.includes(code) ||
+          name === "Administrador" ||
+          name === "Administrador da plataforma" ||
+          name === "Proprietário da plataforma" ||
+          name === "Super Administrador"
+        );
+      });
+      if (isAdminRole) return true;
+    }
   } catch {
     // Falha fechada
   }
