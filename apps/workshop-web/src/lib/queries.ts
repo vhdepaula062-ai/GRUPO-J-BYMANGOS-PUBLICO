@@ -189,8 +189,9 @@ export interface PromotionRow {
   image_url?: string | null;
   status: string;
   created_at: string;
-  valid_from?: string;
-  valid_until?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  discount_percentage?: number | null;
 }
 
 export async function getWorkshopPromotions(workshopId: string): Promise<PromotionRow[]> {
@@ -221,8 +222,9 @@ export async function getWorkshopPromotions(workshopId: string): Promise<Promoti
       image_url: imageUrl,
       status: p.status as string,
       created_at: p.created_at as string,
-      valid_from: p.start_date as string | undefined,
-      valid_until: p.end_date as string | undefined
+      start_date: p.start_date as string | null,
+      end_date: p.end_date as string | null,
+      discount_percentage: p.discount_percentage as number | null
     };
   });
 }
@@ -238,9 +240,10 @@ export interface WorkshopCustomerRow {
 }
 
 export async function getWorkshopCustomers(workshopId: string): Promise<WorkshopCustomerRow[]> {
-  const supabase = createServerSupabaseClient();
+  const adminDb = createAdminServerClient();
 
-  const { data, error } = await supabase
+  // 1. Busca por vínculos na tabela workshop_assignments
+  const { data: assignments } = await adminDb
     .from("workshop_assignments")
     .select(
       `
@@ -256,23 +259,87 @@ export async function getWorkshopCustomers(workshopId: string): Promise<Workshop
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
-  if (error) return [];
+  // 2. Busca motoristas vinculados diretamente ou cadastrados no ecossistema
+  const { data: directCustomers } = await adminDb
+    .from("customers")
+    .select(
+      `
+      id, created_at,
+      profile:profiles(full_name, phone),
+      vehicles(plate, brand, model)
+    `
+    )
+    .or(`assigned_workshop_id.eq.${workshopId},assigned_workshop_id.is.null`)
+    .order("created_at", { ascending: false });
 
-  return (data ?? []).map((row: Record<string, unknown>) => {
-    const cust = row.customer as Record<string, unknown> | null;
-    const profile = cust?.profile as Record<string, unknown> | null;
-    const vehicles = (cust?.vehicles as Array<Record<string, unknown>>) ?? [];
+  const map = new Map<string, WorkshopCustomerRow>();
+
+  (directCustomers ?? []).forEach((c: any) => {
+    const profile = c.profile;
+    const vehicles = c.vehicles ?? [];
     const firstVehicle = vehicles[0];
-
-    return {
-      id: row.id as string,
-      full_name: (profile?.full_name as string) || "Motorista Assinante",
-      phone: (profile?.phone as string) || "—",
-      plate: (firstVehicle?.plate as string) || "—",
+    map.set(c.id, {
+      id: c.id,
+      full_name: profile?.full_name || "Motorista Assinante",
+      phone: profile?.phone || "—",
+      plate: firstVehicle?.plate || "—",
       vehicle_model: firstVehicle
-        ? `${firstVehicle.brand} ${firstVehicle.model}`
+        ? `${firstVehicle.brand || ""} ${firstVehicle.model || ""}`.trim()
         : "Veículo Não Cadastrado",
-      created_at: row.created_at as string
-    };
+      created_at: c.created_at || new Date().toISOString()
+    });
   });
+
+  (assignments ?? []).forEach((row: any) => {
+    const cust = row.customer;
+    if (!cust) return;
+    const profile = cust.profile;
+    const vehicles = cust.vehicles ?? [];
+    const firstVehicle = vehicles[0];
+    map.set(cust.id, {
+      id: row.id,
+      full_name: profile?.full_name || "Motorista Assinante",
+      phone: profile?.phone || "—",
+      plate: firstVehicle?.plate || "—",
+      vehicle_model: firstVehicle
+        ? `${firstVehicle.brand || ""} ${firstVehicle.model || ""}`.trim()
+        : "Veículo Não Cadastrado",
+      created_at: row.created_at
+    });
+  });
+
+  return Array.from(map.values());
+}
+
+// ----------------------------------------------------------------------------
+// AGENDAMENTOS OPERACIONAIS (AGENDA DE SERVIÇOS)
+// ----------------------------------------------------------------------------
+
+export interface AppointmentRow {
+  id: string;
+  customerName: string;
+  phone: string;
+  vehicle: string;
+  service: string;
+  date: string;
+  shift: "morning" | "afternoon" | "flexible";
+  status: "confirmed" | "completed" | "in_progress" | "canceled";
+  notes?: string;
+}
+
+export async function getWorkshopAppointments(workshopId: string): Promise<AppointmentRow[]> {
+  const adminDb = createAdminServerClient();
+  const configKey = `appointments:${workshopId}`;
+
+  const { data, error } = await adminDb
+    .from("remote_configurations")
+    .select("value")
+    .eq("key", configKey)
+    .maybeSingle();
+
+  if (error || !data?.value || !Array.isArray(data.value)) {
+    return []; // Retorna lista vazia (0 dados fictícios)
+  }
+
+  return data.value as AppointmentRow[];
 }

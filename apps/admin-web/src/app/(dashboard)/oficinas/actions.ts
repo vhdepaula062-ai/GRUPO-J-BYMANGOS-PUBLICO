@@ -1,6 +1,6 @@
 "use server";
 
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminServerClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { createHmac } from "crypto";
 
@@ -17,7 +17,7 @@ export async function moderateWorkshopAction(
   workshopId: string,
   newStatus: "active" | "inactive" | "suspended" | "pending_approval"
 ): Promise<ModerateWorkshopResult> {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
   try {
     const { error } = await supabase
@@ -78,7 +78,7 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
   message: string;
   workshop?: Record<string, unknown>;
 }> {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
   const cleanCnpj = data.cnpj.replace(/\D/g, "");
   const maskedCnpj =

@@ -1,27 +1,59 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { Button, Wrench, CheckCircle2, ShieldCheck, Clock, Calendar, X } from "@grupo-j/ui-web";
-import { createBenefitDefinition, toggleBenefitStatus } from "./actions";
+import { Button, Wrench, CheckCircle2, ShieldCheck, Clock, Calendar, X, Pencil, Trash2 } from "@grupo-j/ui-web";
+import { createBenefitDefinition, toggleBenefitStatus, updateBenefitDefinition, deleteBenefitDefinition } from "./actions";
 import type { BenefitDefinitionRow } from "@/lib/queries";
 
 interface Props {
   benefits: BenefitDefinitionRow[];
 }
 
+type ModalMode = "create" | "edit" | null;
+
 export function BeneficiosManager({ benefits }: Props) {
   const [items, setItems] = useState<BenefitDefinitionRow[]>(benefits);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Form State
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [periodicity, setPeriodicity] = useState("monthly");
   const [gracePeriodDays, setGracePeriodDays] = useState(0);
-  const [quantityPerCycle, _setQuantityPerCycle] = useState(1);
+  const [quantityPerCycle, setQuantityPerCycle] = useState(1);
   const [description, setDescription] = useState("");
+
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const openCreate = () => {
+    setEditingId(null);
+    setName(""); setSlug(""); setDescription("");
+    setPeriodicity("monthly"); setGracePeriodDays(0); setQuantityPerCycle(1);
+    setModalMode("create");
+  };
+
+  const openEdit = (b: BenefitDefinitionRow) => {
+    setEditingId(b.id);
+    setName(b.name);
+    setSlug(b.slug);
+    setDescription(b.description ?? "");
+    setPeriodicity(b.periodicity);
+    setGracePeriodDays(b.grace_period_days);
+    setQuantityPerCycle(b.quantity_per_cycle);
+    setModalMode("edit");
+  };
+
+  const closeModal = () => {
+    setModalMode(null);
+    setEditingId(null);
+  };
 
   const handleCreateBenefit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +70,7 @@ export function BeneficiosManager({ benefits }: Props) {
           gracePeriodDays: Number(gracePeriodDays)
         });
       } catch (err: unknown) {
-        setFeedback(err instanceof Error ? err.message : "Falha ao cadastrar o benefício.");
+        showFeedback("error", err instanceof Error ? err.message : "Falha ao cadastrar o benefício.");
         return;
       }
 
@@ -54,12 +86,47 @@ export function BeneficiosManager({ benefits }: Props) {
       };
 
       setItems((prev) => [novo, ...prev]);
-      setIsModalOpen(false);
-      setName("");
-      setSlug("");
-      setDescription("");
-      setFeedback("Novo benefício cadastrado com sucesso!");
-      setTimeout(() => setFeedback(null), 4000);
+      closeModal();
+      showFeedback("success", "Novo benefício cadastrado com sucesso!");
+    });
+  };
+
+  const handleEditBenefit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId || !name) return;
+
+    startTransition(async () => {
+      const result = await updateBenefitDefinition(editingId, {
+        name,
+        slug: slug || name.toLowerCase().replace(/\s+/g, "-"),
+        description,
+        periodicity,
+        quantityPerCycle: Number(quantityPerCycle),
+        gracePeriodDays: Number(gracePeriodDays)
+      });
+
+      if (!result.success) {
+        showFeedback("error", result.error || "Falha ao editar o benefício.");
+        return;
+      }
+
+      setItems((prev) =>
+        prev.map((b) =>
+          b.id === editingId
+            ? {
+                ...b,
+                name,
+                slug: slug || name.toLowerCase().replace(/\s+/g, "-"),
+                description,
+                periodicity,
+                quantity_per_cycle: Number(quantityPerCycle),
+                grace_period_days: Number(gracePeriodDays)
+              }
+            : b
+        )
+      );
+      closeModal();
+      showFeedback("success", "Benefício atualizado com sucesso!");
     });
   };
 
@@ -68,34 +135,35 @@ export function BeneficiosManager({ benefits }: Props) {
       try {
         await toggleBenefitStatus(id, !currentActive);
       } catch (err: unknown) {
-        setFeedback(err instanceof Error ? err.message : "Falha ao atualizar o benefício.");
+        showFeedback("error", err instanceof Error ? err.message : "Falha ao atualizar.");
         return;
       }
+      setItems((prev) => prev.map((b) => (b.id === id ? { ...b, is_active: !currentActive } : b)));
+      showFeedback("success", !currentActive ? "Benefício ativado!" : "Benefício pausado.");
+    });
+  };
 
-      setItems((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, is_active: !currentActive } : b))
-      );
-      setFeedback(
-        !currentActive
-          ? "Benefício ativado com sucesso!"
-          : "Benefício pausado temporariamente."
-      );
-      setTimeout(() => setFeedback(null), 3000);
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      const result = await deleteBenefitDefinition(id);
+      if (!result.success) {
+        showFeedback("error", result.error || "Falha ao excluir.");
+        setConfirmDeleteId(null);
+        return;
+      }
+      setItems((prev) => prev.filter((b) => b.id !== id));
+      setConfirmDeleteId(null);
+      showFeedback("success", "Benefício excluído permanentemente.");
     });
   };
 
   const formatPeriodicity = (p: string) => {
     switch (p) {
-      case "monthly":
-        return "Mensal (1x a cada 30 dias)";
-      case "quarterly":
-        return "Trimestral (1x a cada 90 dias)";
-      case "semi_annual":
-        return "Semestral (1x a cada 180 dias)";
-      case "annual":
-        return "Anual (1x a cada 365 dias)";
-      default:
-        return p;
+      case "monthly": return "Mensal (30 dias)";
+      case "quarterly": return "Trimestral (90 dias)";
+      case "semi_annual": return "Semestral (180 dias)";
+      case "annual": return "Anual (365 dias)";
+      default: return p;
     }
   };
 
@@ -108,20 +176,22 @@ export function BeneficiosManager({ benefits }: Props) {
             Definição de regras de periodicidade, limites de carência e validação de vouchers para motoristas.
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          className="font-bold shadow-md shadow-blue-600/20"
-          onClick={() => setIsModalOpen(true)}
-        >
+        <Button variant="primary" size="md" className="font-bold shadow-md shadow-blue-600/20" onClick={openCreate}>
           + Adicionar Benefício
         </Button>
       </div>
 
+      {/* Feedback */}
       {feedback && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-3 text-xs font-semibold animate-in fade-in">
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{feedback}</span>
+        <div
+          className={`p-4 rounded-2xl flex items-center gap-3 text-xs font-semibold animate-in fade-in ${
+            feedback.type === "error"
+              ? "bg-rose-50 border border-rose-200 text-rose-800"
+              : "bg-emerald-50 border border-emerald-200 text-emerald-800"
+          }`}
+        >
+          <CheckCircle2 size={16} className={feedback.type === "error" ? "text-rose-600 shrink-0" : "text-emerald-600 shrink-0"} />
+          <span>{feedback.message}</span>
         </div>
       )}
 
@@ -134,14 +204,10 @@ export function BeneficiosManager({ benefits }: Props) {
           <div className="max-w-md mx-auto">
             <h3 className="text-base font-bold text-slate-900">Nenhum benefício cadastrado no banco</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Rode o script de seed inicial (`supabase/seed/seed.production.sql`) para inserir os 4 benefícios padrão de prevenção ou cadastre um novo benefício clicando no botão acima.
+              Cadastre benefícios preventivos clicando no botão acima.
             </p>
           </div>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setIsModalOpen(true)}
-          >
+          <Button variant="primary" size="sm" onClick={openCreate}>
             Cadastrar Primeiro Benefício
           </Button>
         </div>
@@ -164,11 +230,7 @@ export function BeneficiosManager({ benefits }: Props) {
                         : "bg-slate-50 text-slate-600 border-slate-200"
                     }`}
                   >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        b.is_active ? "bg-emerald-500" : "bg-slate-400"
-                      }`}
-                    />
+                    <span className={`w-1.5 h-1.5 rounded-full ${b.is_active ? "bg-emerald-500" : "bg-slate-400"}`} />
                     {b.is_active ? "Ativo" : "Pausado"}
                   </span>
                 </div>
@@ -204,42 +266,89 @@ export function BeneficiosManager({ benefits }: Props) {
                 </div>
               </div>
 
+              {/* Ações do card */}
               <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                <span className="text-[11px] font-mono text-slate-400">{b.slug}</span>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => handleToggle(b.id, b.is_active)}
-                  className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline"
-                >
-                  {b.is_active ? "Pausar" : "Ativar"}
-                </button>
+                <span className="text-[11px] font-mono text-slate-400 truncate">{b.slug}</span>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Ativar/Pausar */}
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => handleToggle(b.id, b.is_active)}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 underline"
+                  >
+                    {b.is_active ? "Pausar" : "Ativar"}
+                  </button>
+
+                  {/* Editar */}
+                  <button
+                    type="button"
+                    onClick={() => openEdit(b)}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+                    title="Editar benefício"
+                  >
+                    <Pencil size={13} />
+                  </button>
+
+                  {/* Excluir / Confirmar */}
+                  {confirmDeleteId === b.id ? (
+                    <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 rounded-lg px-1.5 py-0.5">
+                      <span className="text-[10px] text-rose-700 font-semibold">Excluir?</span>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => handleDelete(b.id)}
+                        className="text-[10px] font-bold text-white bg-rose-600 hover:bg-rose-700 px-1.5 py-0.5 rounded transition"
+                      >
+                        Sim
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-[10px] text-slate-500 hover:text-slate-700 px-1"
+                      >
+                        Não
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(b.id)}
+                      className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition"
+                      title="Excluir benefício"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Modal de Cadastro de Benefício */}
-      {isModalOpen && (
+      {/* Modal Criar / Editar */}
+      {modalMode !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Novo Benefício Preventivo</h3>
-                <p className="text-xs text-slate-500">Defina o serviço e regras de utilização.</p>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {modalMode === "create" ? "Novo Benefício Preventivo" : "Editar Benefício"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {modalMode === "create" ? "Defina o serviço e regras de utilização." : "Atualize os dados deste benefício."}
+                </p>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600"
-              >
+              <button onClick={closeModal} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600">
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateBenefit} className="space-y-4">
+            <form onSubmit={modalMode === "create" ? handleCreateBenefit : handleEditBenefit} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nome do Benefício</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nome do Benefício *</label>
                 <input
                   type="text"
                   placeholder="Ex: Troca de Palhetas Dianteiras"
@@ -250,7 +359,18 @@ export function BeneficiosManager({ benefits }: Props) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Slug (identificador)</label>
+                <input
+                  type="text"
+                  placeholder="gerado-automaticamente"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Periodicidade</label>
                   <select
@@ -258,13 +378,12 @@ export function BeneficiosManager({ benefits }: Props) {
                     onChange={(e) => setPeriodicity(e.target.value)}
                     className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
                   >
-                    <option value="monthly">Mensal (30 dias)</option>
-                    <option value="quarterly">Trimestral (90 dias)</option>
-                    <option value="semi_annual">Semestral (180 dias)</option>
-                    <option value="annual">Anual (365 dias)</option>
+                    <option value="monthly">Mensal</option>
+                    <option value="quarterly">Trimestral</option>
+                    <option value="semi_annual">Semestral</option>
+                    <option value="annual">Anual</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Carência (dias)</label>
                   <input
@@ -275,10 +394,20 @@ export function BeneficiosManager({ benefits }: Props) {
                     className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Cota/Ciclo</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantityPerCycle}
+                    onChange={(e) => setQuantityPerCycle(Number(e.target.value))}
+                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#034EFE]/20"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Descrição Técnica / Procedimento</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Descrição Técnica</label>
                 <textarea
                   rows={3}
                   placeholder="Instruções para a oficina mecânica..."
@@ -289,11 +418,11 @@ export function BeneficiosManager({ benefits }: Props) {
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                <Button variant="outline" size="sm" type="button" onClick={() => setIsModalOpen(false)}>
+                <Button variant="outline" size="sm" type="button" onClick={closeModal}>
                   Cancelar
                 </Button>
                 <Button variant="primary" size="sm" type="submit" disabled={isPending}>
-                  Salvar Benefício
+                  {isPending ? "Salvando..." : modalMode === "create" ? "Salvar Benefício" : "Atualizar Benefício"}
                 </Button>
               </div>
             </form>

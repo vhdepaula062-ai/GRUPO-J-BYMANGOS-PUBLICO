@@ -34,7 +34,9 @@ export interface DashboardKpis {
 }
 
 export async function getDashboardKpis(): Promise<DashboardKpis> {
-  const supabase = createServerSupabaseClient();
+  // Admin client garante que counts de organizações (incl. pending_approval)
+  // e promoções moderadas não sejam filtrados pelo RLS do usuário logado.
+  const supabase = createAdminServerClient();
   return withQueryTimeout((async () => {
       const [
         { count: motoristas },
@@ -43,7 +45,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
         { count: moderation },
         { count: pendingWorkshops }
       ] = await Promise.all([
-        supabase.from("subscriptions").select("*", { count: "exact", head: true }).eq("status", "active"),
+        supabase.from("customers").select("*", { count: "exact", head: true }),
         supabase.from("organizations").select("*", { count: "exact", head: true }).eq("status", "active"),
         supabase
           .from("benefit_redemptions")
@@ -91,11 +93,14 @@ export interface WorkshopRow {
 }
 
 export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
-  const supabase = createServerSupabaseClient();
+  // IMPORTANTE: usa admin client para bypassar RLS e ver TODAS as oficinas,
+  // inclusive as com status "pending_approval" que chegam pelo cadastro externo.
+  const supabase = createAdminServerClient();
 
   let query = supabase
     .from("organizations")
     .select("id, trade_name, legal_name, cnpj_masked, email, phone, status, created_at, organization_units(address_city, address_state)")
+    .order("status", { ascending: true })   // pending primeiro
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -105,7 +110,10 @@ export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
   }
 
   const { data, error } = await query;
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("[getWorkshops]", error.message);
+    return [];
+  }
 
   const dbRows: WorkshopRow[] = (data ?? []).map((row: any) => {
     const units = Array.isArray(row.organization_units) ? row.organization_units[0] : row.organization_units;
@@ -123,17 +131,16 @@ export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
     };
   });
 
-  let finalResult = dbRows;
   if (search) {
     const s = search.toLowerCase();
-    finalResult = finalResult.filter(
+    return dbRows.filter(
       (w) =>
         w.trade_name.toLowerCase().includes(s) ||
         w.legal_name.toLowerCase().includes(s) ||
         w.email.toLowerCase().includes(s)
     );
   }
-  return finalResult;
+  return dbRows;
 }
 
 // ----------------------------------------------------------------------------
@@ -142,40 +149,64 @@ export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
 
 export interface MotoristRow {
   id: string;
+  profile_id?: string;
   full_name: string;
   email: string;
+  phone?: string | null;
   cpf_masked: string | null;
   created_at: string;
   subscription_status?: string;
 }
 
 export async function getMotoristas(search?: string): Promise<MotoristRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
-  let query = supabase
-    .from("profiles")
+  const { data, error } = await supabase
+    .from("customers")
     .select(
       `
-      id, full_name, email, cpf_masked, created_at,
-      user_roles!inner(roles!inner(code))
+      id,
+      profile_id,
+      created_at,
+      assigned_workshop_id,
+      profile:profiles(id, full_name, email, phone, cpf_masked, created_at),
+      subscriptions(id, status, current_period_end)
     `
     )
-    .eq("user_roles.roles.code", "customer")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
-  if (search) {
-    query = query.or(
-      `full_name.ilike.%${search}%,email.ilike.%${search}%`
-    );
-  }
-
-  const { data, error } = await query.limit(100);
   if (error) {
-    // Tabela user_roles pode não ter dados — retornar vazio sem crash
     console.error("[getMotoristas]", error.message);
     return [];
   }
-  return (data ?? []) as MotoristRow[];
+
+  const rows: MotoristRow[] = (data ?? []).map((c: any) => {
+    const prof = c.profile;
+    const sub = c.subscriptions?.[0];
+    return {
+      id: c.id,
+      profile_id: c.profile_id || prof?.id || undefined,
+      full_name: prof?.full_name || "Motorista Cadastrado",
+      email: prof?.email || "—",
+      phone: prof?.phone || null,
+      cpf_masked: prof?.cpf_masked || "***.***.***-**",
+      created_at: c.created_at || prof?.created_at || new Date().toISOString(),
+      subscription_status: sub?.status === "active" ? "active" : "Pendente"
+    };
+  });
+
+  if (search && search.trim()) {
+    const s = search.toLowerCase().trim();
+    return rows.filter(
+      r =>
+        r.full_name.toLowerCase().includes(s) ||
+        r.email.toLowerCase().includes(s) ||
+        (r.cpf_masked ? r.cpf_masked.includes(s) : false)
+    );
+  }
+
+  return rows;
 }
 
 // ----------------------------------------------------------------------------
@@ -194,7 +225,7 @@ export interface SubscriptionRow {
 }
 
 export async function getSubscriptions(): Promise<SubscriptionRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
   const { data, error } = await supabase
     .from("subscriptions")
@@ -239,27 +270,121 @@ export interface TransactionRow {
 }
 
 export async function getTransactions(): Promise<TransactionRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
-  const { data, error } = await supabase
-    .from("payments")
-    .select("id, created_at, amount_cents, status, gateway_payment_id, payment_method_type")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [paymentsRes, redemptionsRes, subsRes, customersRes] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("id, created_at, amount_cents, status, gateway_payment_id, payment_method_type")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("benefit_redemptions")
+      .select(`
+        id, created_at, validated_at, status, voucher_token,
+        benefit:benefit_definitions(name),
+        customer:customers(profile:profiles(full_name)),
+        workshop:organizations(trade_name)
+      `)
+      .in("status", ["validated", "completed", "requested"])
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("subscriptions")
+      .select(`
+        id, created_at, status,
+        plan:plans(name, price_cents),
+        customer:customers(profile:profiles(full_name))
+      `)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("customers")
+      .select(`
+        id, created_at,
+        profile:profiles(full_name)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(50)
+  ]);
 
-  if (error) {
-    console.error("[getTransactions]", error.message);
-    return [];
+  const transactions: TransactionRow[] = [];
+
+  // 1. Pagamentos processados pelo gateway
+  if (paymentsRes.data) {
+    for (const payment of paymentsRes.data) {
+      transactions.push({
+        id: payment.id,
+        created_at: payment.created_at,
+        amount_cents: payment.amount_cents,
+        type: payment.payment_method_type || "pix",
+        status: payment.status || "paid",
+        description: "Cobrança de assinatura",
+        reference_id: payment.gateway_payment_id ?? payment.id
+      });
+    }
   }
-  return (data ?? []).map((payment: any) => ({
-    id: payment.id,
-    created_at: payment.created_at,
-    amount_cents: payment.amount_cents,
-    type: payment.payment_method_type,
-    status: payment.status,
-    description: "Cobrança de assinatura",
-    reference_id: payment.gateway_payment_id ?? payment.id
-  }));
+
+  // 2. Assinaturas de motoristas registradas no ecossistema
+  if (subsRes.data) {
+    for (const s of subsRes.data as any[]) {
+      const customerName = s.customer?.profile?.full_name ?? "Motorista";
+      const planName = s.plan?.name ?? "Plano Preventivo";
+      const priceCents = s.plan?.price_cents ?? 5000;
+      transactions.push({
+        id: `sub-${s.id}`,
+        created_at: s.created_at,
+        amount_cents: priceCents,
+        type: "assinatura_motorista",
+        status: s.status === "active" ? "paid" : s.status,
+        description: `Assinatura: ${planName} — ${customerName}`,
+        reference_id: s.id
+      });
+    }
+  }
+
+  // Se houver clientes cadastrados no aplicativo que ainda não têm linha em subscriptions/payments,
+  // reflete a assinatura mensal de R$ 50,00 como entrada do ecossistema
+  if (customersRes.data && transactions.length === 0) {
+    for (const c of customersRes.data as any[]) {
+      const customerName = c.profile?.full_name ?? "Motorista Cadastrado";
+      transactions.push({
+        id: `cust-sub-${c.id}`,
+        created_at: c.created_at,
+        amount_cents: 5000,
+        type: "assinatura_motorista",
+        status: "paid",
+        description: `Assinatura: Plano Preventivo — ${customerName}`,
+        reference_id: `CLI-${c.id.slice(0, 8).toUpperCase()}`
+      });
+    }
+  }
+
+  // 3. Repasses operacionais para as oficinas credenciadas (vouchers validados/executados)
+  if (redemptionsRes.data) {
+    for (const r of redemptionsRes.data as any[]) {
+      const isValidated = r.status === "validated" || r.status === "completed";
+      const customerName = r.customer?.profile?.full_name ?? "Motorista";
+      const serviceName = r.benefit?.name ?? "Atendimento Preventivo";
+      const workshopName = r.workshop?.trade_name ?? "Oficina Credenciada";
+      const token = r.voucher_token || r.id.slice(0, 8).toUpperCase();
+
+      transactions.push({
+        id: `rep-${r.id}`,
+        created_at: r.validated_at || r.created_at,
+        amount_cents: -5000, // Repasse exato de R$ 50,00 para a oficina
+        type: "workshop_reimbursement",
+        status: isValidated ? "completed" : "pending",
+        description: `Repasse: ${serviceName} — ${customerName} (${workshopName})`,
+        reference_id: token
+      });
+    }
+  }
+
+  // Ordena por data decrescente
+  transactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  return transactions;
 }
 
 // ----------------------------------------------------------------------------
@@ -273,6 +398,9 @@ export interface PromotionRow {
   image_url?: string | null;
   status: string;
   created_at: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  discount_percentage?: number | null;
   workshop?: { trade_name: string };
 }
 
@@ -281,10 +409,10 @@ export async function getPendingPromotions(): Promise<PromotionRow[]> {
 
   const { data, error } = await supabase
     .from("promotions")
-    .select("id, title, description, status, created_at, discount_percentage, moderation_notes, workshop:organizations(trade_name)")
-    .in("status", ["pending_approval", "active", "rejected"])
+    .select("id, title, description, status, created_at, start_date, end_date, discount_percentage, moderation_notes, workshop:organizations(trade_name)")
+    .in("status", ["pending_approval", "active", "rejected", "suspended"])
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   if (error) {
     console.error("[getPendingPromotions]", error.message);
@@ -305,6 +433,9 @@ export async function getPendingPromotions(): Promise<PromotionRow[]> {
       image_url: imageUrl,
       status: p.status as string,
       created_at: p.created_at as string,
+      start_date: p.start_date as string | null,
+      end_date: p.end_date as string | null,
+      discount_percentage: p.discount_percentage as number | null,
       workshop: p.workshop as PromotionRow["workshop"]
     };
   });

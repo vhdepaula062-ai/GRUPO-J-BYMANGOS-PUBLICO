@@ -1,11 +1,14 @@
 import React from "react";
-import { getPendingPromotions } from "@/lib/queries";
+import { getPendingPromotions, getWorkshops } from "@/lib/queries";
 import { PromocoesModerator } from "./PromocoesModerator";
 
 export const dynamic = "force-dynamic";
 
 export default async function PromocoesAdminPage() {
-  const promotions = await getPendingPromotions();
+  const [promotions, workshops] = await Promise.all([
+    getPendingPromotions(),
+    getWorkshops()
+  ]);
 
   return (
     <div className="space-y-6 text-left">
@@ -16,7 +19,7 @@ export default async function PromocoesAdminPage() {
         </p>
       </div>
 
-      <PromocoesModerator promotions={promotions} />
+      <PromocoesModerator promotions={promotions} workshops={workshops} />
     </div>
   );
 }

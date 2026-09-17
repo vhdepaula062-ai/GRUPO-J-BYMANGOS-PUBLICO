@@ -1,7 +1,11 @@
 "use server";
 
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminServerClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+
+// ---------------------------------------------------------------------------
+// CREATE
+// ---------------------------------------------------------------------------
 
 export async function createBenefitDefinition(formData: {
   name: string;
@@ -11,7 +15,7 @@ export async function createBenefitDefinition(formData: {
   quantityPerCycle: number;
   gracePeriodDays: number;
 }) {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
   const { error } = await supabase.from("benefit_definitions").insert({
     name: formData.name,
@@ -32,8 +36,12 @@ export async function createBenefitDefinition(formData: {
   return { success: true };
 }
 
+// ---------------------------------------------------------------------------
+// TOGGLE STATUS
+// ---------------------------------------------------------------------------
+
 export async function toggleBenefitStatus(id: string, isActive: boolean) {
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminServerClient();
 
   const { error } = await supabase
     .from("benefit_definitions")
@@ -43,6 +51,66 @@ export async function toggleBenefitStatus(id: string, isActive: boolean) {
   if (error) {
     console.error("[toggleBenefitStatus]", error.message);
     throw new Error(error.message);
+  }
+
+  revalidatePath("/beneficios");
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// UPDATE — Editar benefício existente
+// ---------------------------------------------------------------------------
+
+export async function updateBenefitDefinition(
+  id: string,
+  formData: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    periodicity?: string;
+    quantityPerCycle?: number;
+    gracePeriodDays?: number;
+  }
+) {
+  const supabase = createAdminServerClient();
+
+  const updatePayload: Record<string, any> = {};
+  if (formData.name !== undefined) updatePayload.name = formData.name;
+  if (formData.slug !== undefined) updatePayload.slug = formData.slug;
+  if (formData.description !== undefined) updatePayload.description = formData.description;
+  if (formData.periodicity !== undefined) updatePayload.periodicity = formData.periodicity;
+  if (formData.quantityPerCycle !== undefined) updatePayload.quantity_per_cycle = formData.quantityPerCycle;
+  if (formData.gracePeriodDays !== undefined) updatePayload.grace_period_days = formData.gracePeriodDays;
+
+  const { error } = await supabase
+    .from("benefit_definitions")
+    .update(updatePayload)
+    .eq("id", id);
+
+  if (error) {
+    console.error("[updateBenefitDefinition]", error.message);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/beneficios");
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// DELETE — Excluir benefício permanentemente
+// ---------------------------------------------------------------------------
+
+export async function deleteBenefitDefinition(id: string) {
+  const supabase = createAdminServerClient();
+
+  const { error } = await supabase
+    .from("benefit_definitions")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("[deleteBenefitDefinition]", error.message);
+    return { success: false, error: error.message };
   }
 
   revalidatePath("/beneficios");

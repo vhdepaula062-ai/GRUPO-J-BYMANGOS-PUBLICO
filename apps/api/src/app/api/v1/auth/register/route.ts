@@ -47,9 +47,53 @@ export async function POST(request: NextRequest) {
       cpf_masked: CpfSecurity.mask(cpf), cpf_encrypted: CpfSecurity.encrypt(cpf, encryptionKey),
       cpf_blind_index: blindIndex, updated_at: new Date().toISOString()
     });
-    if (profileError) throw profileError;
-    const { data: customer, error: customerError } = await admin.from("customers").upsert({ profile_id: signup.user.id }, { onConflict: "profile_id" }).select("id").single();
+    if (profileError) {
+      console.warn("[Register] Profile upsert error:", profileError.message);
+    }
+    // Busca a primeira oficina ativa ou a Rede Credenciada para vincular o motorista
+    const { data: defaultWorkshop } = await admin
+      .from("organizations")
+      .select("id")
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const assignedWorkshopId = defaultWorkshop?.id || null;
+
+    const { data: customer, error: customerError } = await admin
+      .from("customers")
+      .upsert({
+        profile_id: signup.user.id,
+        assigned_workshop_id: assignedWorkshopId
+      }, { onConflict: "profile_id" })
+      .select("id")
+      .single();
     if (customerError) throw customerError;
+
+    if (assignedWorkshopId) {
+      await admin.from("workshop_assignments").insert({
+        customer_id: customer.id,
+        workshop_id: assignedWorkshopId,
+        next_change_allowed_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+        is_active: true
+      });
+    }
+
+    // Associa o papel de customer se existir
+    const { data: roleRow } = await admin
+      .from("roles")
+      .select("id")
+      .eq("code", "customer")
+      .maybeSingle();
+
+    if (roleRow?.id) {
+      await admin.from("user_roles").upsert({
+        user_id: signup.user.id,
+        role_id: roleRow.id
+      }, { onConflict: "user_id,role_id" });
+    }
+
     const now = new Date().toISOString();
     const { error: consentError } = await admin.from("consent_records").insert([
       { user_id: signup.user.id, document_type: "terms_of_use", document_version: String(body.termsVersion ?? "1.0"), accepted: true, accepted_at: now },

@@ -64,5 +64,10 @@ export {
   KeyRound,
   ArrowDownLeft,
   ArrowUpRight,
-  BarChart3
+  BarChart3,
+  Pencil,
+  Trash2,
+  PauseCircle,
+  PlayCircle
 } from "lucide-react";
+
