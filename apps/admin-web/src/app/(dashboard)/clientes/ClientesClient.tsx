@@ -22,6 +22,7 @@ import {
 } from "@grupo-j/ui-web";
 import type { MotoristRow } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
+import { exportToCsv } from "@/lib/exportCsv";
 import { ClienteSearchBar } from "./ClienteSearchBar";
 import { deleteMotoristaAction } from "./actions";
 
@@ -73,6 +74,21 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
     }
   };
 
+  const handleExportCsv = () => {
+    exportToCsv(
+      "motoristas_assinantes_grupo_j",
+      [
+        { key: "full_name", header: "Nome Completo" },
+        { key: "email", header: "E-mail" },
+        { key: "phone", header: "Telefone", format: (v) => v || "Não informado" },
+        { key: "cpf_masked", header: "CPF", format: (v) => v || "***.***.***-**" },
+        { key: "created_at", header: "Cadastrado em", format: (v) => formatDate(v) },
+        { key: "subscription_status", header: "Assinatura", format: (v) => v === "active" ? "Ativa (R$ 50/mês)" : "Pendente" }
+      ],
+      motoristas
+    );
+  };
+
   return (
     <div className="space-y-6 text-left">
       <PageHeader
@@ -80,7 +96,12 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
         subtitle="Clientes com assinatura ativa de R$ 50/mês. CPF protegido por AES-256-GCM + Blind Index HMAC."
         actions={
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" leftIcon={<Download size={14} />}>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Download size={14} />}
+              onClick={handleExportCsv}
+            >
               Exportar CSV
             </Button>
           </div>

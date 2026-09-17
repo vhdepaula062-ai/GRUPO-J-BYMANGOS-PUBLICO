@@ -144,3 +144,106 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
     };
   }
 }
+
+export interface DecommissionWorkshopOptions {
+  workshopId: string;
+  fallbackWorkshopId?: string;
+  deletePermanently?: boolean;
+}
+
+export async function getAssignedMotoristasCount(workshopId: string): Promise<number> {
+  const supabase = createAdminServerClient();
+  const { count } = await supabase
+    .from("customers")
+    .select("id", { count: "exact", head: true })
+    .eq("assigned_workshop_id", workshopId);
+  return count ?? 0;
+}
+
+/**
+ * Descredencia ou remove uma oficina parceira, realocando com segurança
+ * os motoristas vinculados para uma oficina ativa de transição.
+ */
+export async function decommissionWorkshopAction(
+  options: DecommissionWorkshopOptions
+): Promise<{ success: boolean; message: string }> {
+  const { workshopId, fallbackWorkshopId, deletePermanently } = options;
+  const supabase = createAdminServerClient();
+
+  try {
+    // 1. Realoca os motoristas caso haja oficina substituta
+    if (fallbackWorkshopId && fallbackWorkshopId !== workshopId) {
+      const { data: customers } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("assigned_workshop_id", workshopId);
+
+      const customerIds = (customers ?? []).map((c: { id: string }) => c.id);
+
+      if (customerIds.length > 0) {
+        await supabase
+          .from("customers")
+          .update({
+            assigned_workshop_id: fallbackWorkshopId,
+            workshop_assigned_at: new Date().toISOString()
+          })
+          .in("id", customerIds);
+
+        const historyRows = customerIds.map((cid: string) => ({
+          customer_id: cid,
+          previous_workshop_id: workshopId,
+          new_workshop_id: fallbackWorkshopId,
+          assigned_at: new Date().toISOString(),
+          reason: "Realocação automática pelo Administrador devido ao descredenciamento da oficina de origem."
+        }));
+
+        await supabase.from("workshop_assignment_history").insert(historyRows);
+      }
+    } else {
+      await supabase
+        .from("customers")
+        .update({ assigned_workshop_id: null })
+        .eq("assigned_workshop_id", workshopId);
+    }
+
+    // 2. Se for exclusão física ou desativação
+    if (deletePermanently) {
+      await supabase.from("organization_units").delete().eq("organization_id", workshopId);
+      await supabase.from("organization_members").delete().eq("organization_id", workshopId);
+      await supabase.from("workshop_profiles").delete().eq("organization_id", workshopId);
+      await supabase.from("workshop_documents").delete().eq("organization_id", workshopId);
+      await supabase.from("workshop_services").delete().eq("organization_id", workshopId);
+      await supabase.from("promotions").delete().eq("organization_id", workshopId);
+
+      const { error: delErr } = await supabase.from("organizations").delete().eq("id", workshopId);
+      if (delErr) {
+        // Se houver ordens de serviço históricas, desativa para preservar integridade contábil
+        await supabase
+          .from("organizations")
+          .update({ status: "inactive", updated_at: new Date().toISOString() })
+          .eq("id", workshopId);
+      }
+    } else {
+      await supabase
+        .from("organizations")
+        .update({ status: "inactive", updated_at: new Date().toISOString() })
+        .eq("id", workshopId);
+    }
+
+    revalidatePath("/oficinas");
+    revalidatePath("/dashboard");
+    revalidatePath("/clientes");
+
+    return {
+      success: true,
+      message: "Oficina descredenciada e motoristas devidamente realocados!"
+    };
+  } catch (err) {
+    console.error("[decommissionWorkshopAction] Erro:", err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "Erro ao descredenciar a oficina."
+    };
+  }
+}
+

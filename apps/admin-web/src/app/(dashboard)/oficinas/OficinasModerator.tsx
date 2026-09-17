@@ -15,12 +15,18 @@ import {
   Plus,
   Search,
   RefreshCw,
-  X
+  X,
+  Download,
+  Trash2,
+  Modal
 } from "@grupo-j/ui-web";
 import { formatDate } from "@/lib/format";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   moderateWorkshopAction,
   createDirectWorkshopAction,
+  decommissionWorkshopAction,
+  getAssignedMotoristasCount,
   type DirectWorkshopData
 } from "./actions";
 import type { WorkshopRow } from "@/lib/queries";
@@ -38,6 +44,13 @@ export function OficinasModerator({ initialWorkshops }: OficinasModeratorProps) 
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Descredenciamento & Realocação de motoristas
+  const [decommissioningWorkshop, setDecommissioningWorkshop] = useState<WorkshopRow | null>(null);
+  const [assignedMotoristasCount, setAssignedMotoristasCount] = useState<number>(0);
+  const [fallbackWorkshopId, setFallbackWorkshopId] = useState<string>("");
+  const [deletePermanently, setDeletePermanently] = useState(false);
+  const [isDecommissioning, setIsDecommissioning] = useState(false);
 
   // Modal para cadastro direto pelo admin
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -171,6 +184,85 @@ export function OficinasModerator({ initialWorkshops }: OficinasModeratorProps) 
       }
       setTimeout(() => setFeedback(null), 5000);
     });
+  };
+
+  // Abertura do modal de descredenciamento com checagem de motoristas vinculados
+  const handleOpenDecommission = async (workshop: WorkshopRow) => {
+    setDecommissioningWorkshop(workshop);
+    setFallbackWorkshopId("");
+    setDeletePermanently(false);
+    try {
+      const count = await getAssignedMotoristasCount(workshop.id);
+      setAssignedMotoristasCount(count);
+    } catch {
+      setAssignedMotoristasCount(0);
+    }
+  };
+
+  // Confirmação do descredenciamento e transição de motoristas
+  const handleConfirmDecommission = async () => {
+    if (!decommissioningWorkshop) return;
+    setIsDecommissioning(true);
+    try {
+      const res = await decommissionWorkshopAction({
+        workshopId: decommissioningWorkshop.id,
+        fallbackWorkshopId: fallbackWorkshopId || undefined,
+        deletePermanently
+      });
+      if (res.success) {
+        setWorkshops((prev) =>
+          deletePermanently
+            ? prev.filter((w) => w.id !== decommissioningWorkshop.id)
+            : prev.map((w) => (w.id === decommissioningWorkshop.id ? { ...w, status: "inactive" } : w))
+        );
+        setFeedback({
+          type: "success",
+          text: `Oficina "${decommissioningWorkshop.trade_name}" descredenciada com sucesso.`
+        });
+        setDecommissioningWorkshop(null);
+      } else {
+        setFeedback({
+          type: "error",
+          text: res.message || "Falha ao descredenciar oficina."
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        text: err instanceof Error ? err.message : "Erro inesperado ao descredenciar oficina."
+      });
+    } finally {
+      setIsDecommissioning(false);
+    }
+  };
+
+  // Exportar lista de oficinas em CSV formatado
+  const handleExportCsv = () => {
+    exportToCsv(
+      "oficinas_parceiras_grupo_j",
+      [
+        { key: "trade_name", header: "Nome Fantasia" },
+        { key: "legal_name", header: "Razão Social", format: (v) => v || "—" },
+        { key: "cnpj_masked", header: "CNPJ", format: (v) => v || "—" },
+        { key: "email", header: "E-mail" },
+        { key: "phone", header: "Telefone", format: (v) => v || "—" },
+        { key: "city", header: "Cidade", format: (v, item) => `${v || "—"}/${item.state || "—"}` },
+        {
+          key: "status",
+          header: "Status",
+          format: (v) =>
+            v === "active"
+              ? "Ativa"
+              : v === "pending_approval"
+              ? "Aguardando Aprovação"
+              : v === "suspended"
+              ? "Suspensa"
+              : "Inativa"
+        },
+        { key: "created_at", header: "Cadastrada em", format: (v) => formatDate(v) }
+      ],
+      workshops
+    );
   };
 
   // Cadastro direto pelo Admin
@@ -324,8 +416,16 @@ export function OficinasModerator({ initialWorkshops }: OficinasModeratorProps) 
           </button>
         </div>
 
-        {/* Botão para abrir modal de cadastro direto */}
+        {/* Botões de Ação Superior */}
         <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            leftIcon={<Download size={14} />}
+          >
+            Exportar CSV
+          </Button>
           <Button
             variant="primary"
             size="sm"
@@ -564,18 +664,29 @@ export function OficinasModerator({ initialWorkshops }: OficinasModeratorProps) 
                             </Button>
                           </div>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="xs"
-                            onClick={() => handleToggleStatus(item)}
-                            className={
-                              item.status === "active"
-                                ? "text-amber-700 hover:bg-amber-50"
-                                : "text-emerald-700 hover:bg-emerald-50"
-                            }
-                          >
-                            {item.status === "active" ? "Suspender" : "Reativar"}
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              onClick={() => handleToggleStatus(item)}
+                              className={
+                                item.status === "active"
+                                  ? "text-amber-700 hover:bg-amber-50"
+                                  : "text-emerald-700 hover:bg-emerald-50"
+                              }
+                            >
+                              {item.status === "active" ? "Suspender" : "Reativar"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                              onClick={() => handleOpenDecommission(item)}
+                              leftIcon={<Trash2 size={12} />}
+                            >
+                              Descredenciar
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -750,6 +861,91 @@ export function OficinasModerator({ initialWorkshops }: OficinasModeratorProps) 
           </div>
         </div>
       )}
+
+      {/* MODAL: DESCREDENCIAR OFICINA & REALOCAR MOTORISTAS */}
+      {decommissioningWorkshop && (
+        <Modal
+          isOpen={Boolean(decommissioningWorkshop)}
+          onClose={() => !isDecommissioning && setDecommissioningWorkshop(null)}
+          title="Descredenciar Oficina Parceira"
+          description="Gestão de encerramento de credenciamento e realocação segura de clientes"
+          size="md"
+          footer={
+            <div className="flex items-center justify-end gap-3 w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDecommissioning}
+                onClick={() => setDecommissioningWorkshop(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                leftIcon={<Trash2 size={14} />}
+                isLoading={isDecommissioning}
+                onClick={handleConfirmDecommission}
+              >
+                {isDecommissioning ? "Processando transição..." : "Confirmar Descredenciamento"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4 text-sm text-slate-700">
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+              <p className="font-bold text-slate-900 text-sm">{decommissioningWorkshop.trade_name}</p>
+              <p className="text-xs text-slate-500">
+                CNPJ: {decommissioningWorkshop.cnpj_masked || "Não informado"} • {decommissioningWorkshop.city || "—"}/{decommissioningWorkshop.state || "—"}
+              </p>
+            </div>
+
+            {assignedMotoristasCount > 0 ? (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs space-y-2">
+                <div className="flex items-center gap-2 font-bold text-amber-950">
+                  <AlertTriangle size={16} className="text-amber-600" />
+                  <span>Atenção: {assignedMotoristasCount} motorista(s) vinculado(s)</span>
+                </div>
+                <p>
+                  Para não deixar estes motoristas desassistidos, selecione uma oficina ativa substituta para assumir o atendimento:
+                </p>
+                <select
+                  className="w-full h-10 px-3 bg-white border border-amber-300 rounded-lg text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  value={fallbackWorkshopId}
+                  onChange={(e) => setFallbackWorkshopId(e.target.value)}
+                >
+                  <option value="">Selecione a oficina de destino...</option>
+                  {workshops
+                    .filter((w) => w.id !== decommissioningWorkshop.id && w.status === "active")
+                    .map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.trade_name} ({w.city || "Matriz"})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ) : (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-600" />
+                <span>Nenhum motorista está vinculado exclusivamente a esta oficina no momento.</span>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-slate-100">
+              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deletePermanently}
+                  onChange={(e) => setDeletePermanently(e.target.checked)}
+                  className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+                />
+                <span>Excluir registro permanentemente do banco de dados (caso não haja histórico fiscal)</span>
+              </label>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
+
