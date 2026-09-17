@@ -92,68 +92,48 @@ export async function POST(request: NextRequest) {
   const admin = getAdminDatabase();
 
   try {
-    // 1. Busca ou inicializa o registro de cliente do motorista
-    let { data: customer } = await admin
+    // 1. Busca registro de cliente do motorista
+    const { data: customer } = await admin
       .from("customers")
       .select("id, assigned_workshop_id")
       .eq("profile_id", auth.user.id)
       .maybeSingle();
 
     if (!customer) {
-      const { data: defaultWs } = await admin
-        .from("organizations")
-        .select("id")
-        .eq("status", "active")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: newCust, error: custErr } = await admin
-        .from("customers")
-        .upsert(
-          { profile_id: auth.user.id, assigned_workshop_id: defaultWs?.id || null },
-          { onConflict: "profile_id" }
-        )
-        .select("id, assigned_workshop_id")
-        .single();
-
-      if (custErr || !newCust) {
-        return createProblemResponse({
-          type: "https://api.grupoj.com.br/v1/errors/voucher-create-failed",
-          title: "Voucher não gerado",
-          status: 422,
-          detail: "Cadastro de cliente não encontrado."
-        });
-      }
-      customer = newCust;
+      return createProblemResponse({
+        type: "https://api.grupoj.com.br/v1/errors/customer-not-found",
+        title: "Cadastro de cliente não encontrado",
+        status: 404,
+        detail: "Complete seu cadastro antes de solicitar benefícios."
+      });
     }
 
-    // 2. Garante que haja uma oficina vinculada
-    let workshopId = customer.assigned_workshop_id;
-    if (!workshopId) {
-      const { data: defaultWs } = await admin
-        .from("organizations")
-        .select("id")
-        .eq("status", "active")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+    // 2. Valida titularidade do veículo: deve pertencer ao cliente autenticado e estar ativo
+    const { data: vehicle, error: vehicleErr } = await admin
+      .from("vehicles")
+      .select("id, customer_id, is_active")
+      .eq("id", body.vehicleId)
+      .eq("customer_id", customer.id)
+      .eq("is_active", true)
+      .maybeSingle();
 
-      if (defaultWs?.id) {
-        workshopId = defaultWs.id;
-        await admin
-          .from("customers")
-          .update({ assigned_workshop_id: workshopId })
-          .eq("id", customer.id);
-      }
+    if (vehicleErr || !vehicle) {
+      return createProblemResponse({
+        type: "https://api.grupoj.com.br/v1/errors/vehicle-not-found",
+        title: "Veículo não encontrado",
+        status: 403,
+        detail: "O veículo informado não pertence ao motorista autenticado ou está inativo."
+      });
     }
 
+    // 3. Garante que haja uma oficina vinculada
+    const workshopId = customer.assigned_workshop_id;
     if (!workshopId) {
       return createProblemResponse({
-        type: "https://api.grupoj.com.br/v1/errors/voucher-create-failed",
+        type: "https://api.grupoj.com.br/v1/errors/workshop-required",
         title: "Oficina credenciada necessária",
         status: 422,
-        detail: "Nenhuma oficina credenciada encontrada para vincular o atendimento."
+        detail: "Vincule uma oficina credenciada ao seu perfil antes de solicitar o benefício."
       });
     }
 

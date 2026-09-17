@@ -32,19 +32,6 @@ export async function getMyWorkshop() {
     }
   }
 
-  // Fallback para primeira oficina credenciada ativa para garantir disponibilidade do portal
-  const adminDb = createAdminServerClient();
-  const { data: defaultOrg } = await adminDb
-    .from("organizations")
-    .select("id, trade_name, legal_name, email, phone, status, created_at")
-    .eq("status", "active")
-    .order("created_at")
-    .limit(1)
-    .maybeSingle();
-
-  if (defaultOrg) {
-    return { role: "workshop_owner", organization: defaultOrg as unknown as Record<string, unknown> };
-  }
   return null;
 }
 
@@ -269,7 +256,7 @@ export async function getWorkshopCustomers(workshopId: string): Promise<Workshop
       vehicles(plate, brand, model)
     `
     )
-    .or(`assigned_workshop_id.eq.${workshopId},assigned_workshop_id.is.null`)
+    .eq("assigned_workshop_id", workshopId)
     .order("created_at", { ascending: false });
 
   const map = new Map<string, WorkshopCustomerRow>();

@@ -1,10 +1,20 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
+import { checkIsAdmin } from "@/lib/supabase/server";
 
-export default function DashboardLayout({
+export const dynamic = "force-dynamic";
+
+export default async function DashboardLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    redirect("/login?error=unauthorized");
+  }
+
   return <AdminShell>{children}</AdminShell>;
 }
+

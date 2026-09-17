@@ -10,20 +10,7 @@ import { revalidatePath } from "next/cache";
 
 async function resolveWorkshopId(): Promise<string | null> {
   const workshopData = await getMyWorkshop();
-  let workshopId = (workshopData?.organization as { id?: string } | undefined)?.id ?? null;
-
-  if (!workshopId) {
-    const adminDb = createAdminServerClient();
-    const { data: defaultOrg } = await adminDb
-      .from("organizations")
-      .select("id")
-      .eq("status", "active")
-      .limit(1)
-      .maybeSingle();
-    workshopId = defaultOrg?.id ?? null;
-  }
-
-  return workshopId;
+  return (workshopData?.organization as { id?: string } | undefined)?.id ?? null;
 }
 
 // ---------------------------------------------------------------------------

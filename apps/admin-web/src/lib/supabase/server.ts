@@ -48,3 +48,29 @@ export async function getAuthenticatedUser() {
 
   return user;
 }
+
+export async function checkIsAdmin(): Promise<boolean> {
+  const user = await getAuthenticatedUser();
+  if (!user) return false;
+
+  if (user.app_metadata?.role === "admin" || user.user_metadata?.account_type === "admin") {
+    return true;
+  }
+
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role:roles!inner(name)")
+      .eq("user_id", user.id)
+      .eq("roles.name", "admin")
+      .maybeSingle();
+
+    if (userRole) return true;
+  } catch {
+    // Falha fechada
+  }
+
+  return false;
+}
+

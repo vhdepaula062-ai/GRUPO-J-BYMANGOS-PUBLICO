@@ -1,4 +1,4 @@
-import React from "react";
+import { redirect } from "next/navigation";
 import { WorkshopShell } from "@/components/WorkshopShell";
 import { getMyWorkshop } from "@/lib/queries";
 
@@ -10,6 +10,9 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   const workshopData = await getMyWorkshop();
+  if (!workshopData) {
+    redirect("/login?error=no_workshop");
+  }
   const org = workshopData?.organization as
     | { trade_name?: string; legal_name?: string; city?: string; state?: string }
     | undefined;
