@@ -59,6 +59,24 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/painel", request.url));
     }
 
+    // Verificação de Nível de Garantia de Autenticação (MFA / AAL2)
+    if (user && isPortalRoute) {
+      try {
+        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalData) {
+          if (aalData.nextLevel === "aal2" && aalData.currentLevel === "aal1") {
+            if (pathname !== "/mfa") {
+              return NextResponse.redirect(new URL("/mfa", request.url));
+            }
+          } else if (aalData.currentLevel === "aal2" && pathname === "/mfa") {
+            return NextResponse.redirect(new URL("/painel", request.url));
+          }
+        }
+      } catch (mfaErr) {
+        // Fallback gracioso
+      }
+    }
+
     return supabaseResponse;
   } catch (error) {
     console.error("Workshop middleware error:", error);

@@ -2,10 +2,18 @@ import { NextRequest } from "next/server";
 import { createSuccessResponse, createProblemResponse } from "@/lib/response";
 import { getAdminDatabase, getPublicDatabase } from "@/lib/auth";
 import { CpfSecurity } from "@grupo-j/security";
+import { checkRateLimit } from "@/lib/rate-limiter";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = checkRateLimit(request, {
+    maxRequests: 10,
+    windowMs: 60000,
+    keyPrefix: "login"
+  });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const body = await request.json();
     const identifier = String(body.identifier ?? "").trim().toLowerCase();

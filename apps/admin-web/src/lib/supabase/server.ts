@@ -92,3 +92,27 @@ export async function checkIsAdmin(): Promise<boolean> {
   return false;
 }
 
+/**
+ * Exige reautenticação recente para ações sensíveis (ex: exclusão de dados, alteração de permissões).
+ * Falha caso o último login do usuário tenha ocorrido há mais de maxAgeMinutes minutos.
+ */
+export async function assertRecentAuthentication(maxAgeMinutes = 15): Promise<{ success: boolean; error?: string }> {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return { success: false, error: "Sessão inválida ou não autenticada." };
+  }
+
+  const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
+  const now = Date.now();
+  const maxAgeMs = maxAgeMinutes * 60 * 1000;
+
+  if (now - lastSignIn > maxAgeMs) {
+    return {
+      success: false,
+      error: "Reautenticação obrigatória. Por segurança, confirme sua senha ou faça novo login para realizar esta ação."
+    };
+  }
+
+  return { success: true };
+}
+

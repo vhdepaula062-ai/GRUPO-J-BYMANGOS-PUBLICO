@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminServerClient } from "@/lib/supabase/admin";
+import { checkIsAdmin, assertRecentAuthentication } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export interface DeleteMotoristaResult {
@@ -22,6 +23,16 @@ export async function deleteMotoristaAction(
       success: false,
       message: "ID do motorista não informado."
     };
+  }
+
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { success: false, message: "Acesso negado. Apenas administradores podem excluir motoristas." };
+  }
+
+  const recentAuth = await assertRecentAuthentication(15);
+  if (!recentAuth.success) {
+    return { success: false, message: recentAuth.error || "Reautenticação necessária para executar exclusões." };
   }
 
   const supabase = createAdminServerClient();

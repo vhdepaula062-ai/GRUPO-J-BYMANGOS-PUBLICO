@@ -2,6 +2,7 @@
 
 import { createAdminServerClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { isSafeImageUrl, sanitizePlainText } from "@grupo-j/validation";
 
 // ---------------------------------------------------------------------------
 // STATUS — Aprovar / Rejeitar
@@ -108,6 +109,20 @@ export async function createNetworkPromotion(input: {
   endDate?: string;   // YYYY-MM-DD
 }) {
   try {
+    const safeTitle = sanitizePlainText(input.title);
+    const safeDescription = sanitizePlainText(input.description);
+    if (!safeTitle || !safeDescription) {
+      return { success: false, error: "Título e descrição são obrigatórios." };
+    }
+
+    let validatedImageUrl: string | null = null;
+    if (input.imageUrl && input.imageUrl.trim()) {
+      if (!isSafeImageUrl(input.imageUrl.trim())) {
+        return { success: false, error: "Formato de imagem inválido ou protocolo inseguro." };
+      }
+      validatedImageUrl = input.imageUrl.trim();
+    }
+
     const supabase = createAdminServerClient();
     let workshopId: string | null = null;
 
@@ -142,19 +157,19 @@ export async function createNetworkPromotion(input: {
     defaultEnd.setDate(defaultEnd.getDate() + 30);
     const end = input.endDate || defaultEnd.toISOString().slice(0, 10);
 
-    const fullDescription = input.imageUrl
-      ? `${input.description}\n<!--image_url:${input.imageUrl}-->`
-      : input.description;
+    const fullDescription = validatedImageUrl
+      ? `${safeDescription}\n<!--image_url:${validatedImageUrl}-->`
+      : safeDescription;
 
     const payload: Record<string, any> = {
       workshop_id: workshopId,
-      title: input.title,
+      title: safeTitle,
       description: fullDescription,
       discount_percentage: input.discountPercentage ?? null,
       start_date: start,
       end_date: end,
       status: "active",
-      moderation_notes: input.imageUrl || null
+      moderation_notes: validatedImageUrl || null
     };
 
     const { data, error } = await supabase
@@ -200,7 +215,7 @@ export async function updatePromotion(
       updated_at: new Date().toISOString()
     };
 
-    if (input.title !== undefined) updatePayload.title = input.title;
+    if (input.title !== undefined) updatePayload.title = sanitizePlainText(input.title);
     if (input.discountPercentage !== undefined) updatePayload.discount_percentage = input.discountPercentage;
     if (input.startDate !== undefined) updatePayload.start_date = input.startDate;
     if (input.endDate !== undefined) updatePayload.end_date = input.endDate;
@@ -214,18 +229,27 @@ export async function updatePromotion(
         .eq("id", promotionId)
         .single();
 
-      const baseDesc = input.description !== undefined
+      const rawBaseDesc = input.description !== undefined
         ? input.description
         : (existing?.description?.replace(/<!--image_url:.*?-->/g, "").trim() ?? "");
+      const baseDesc = sanitizePlainText(rawBaseDesc);
 
-      const imageUrl = input.imageUrl !== undefined
+      let rawImageUrl = input.imageUrl !== undefined
         ? input.imageUrl
         : existing?.moderation_notes ?? null;
 
-      updatePayload.description = imageUrl
-        ? `${baseDesc}\n<!--image_url:${imageUrl}-->`
+      let validatedImg: string | null = null;
+      if (rawImageUrl && rawImageUrl.trim()) {
+        if (!isSafeImageUrl(rawImageUrl.trim())) {
+          return { success: false, error: "Formato de imagem inválido ou protocolo inseguro." };
+        }
+        validatedImg = rawImageUrl.trim();
+      }
+
+      updatePayload.description = validatedImg
+        ? `${baseDesc}\n<!--image_url:${validatedImg}-->`
         : baseDesc;
-      updatePayload.moderation_notes = imageUrl;
+      updatePayload.moderation_notes = validatedImg;
     }
 
     const { error } = await supabase

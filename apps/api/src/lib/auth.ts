@@ -59,6 +59,28 @@ export async function authenticateRequest(
         detail: "Faça login novamente para continuar."
       });
     }
+
+    // Verificação de revogação/suspensão no banco de dados
+    try {
+      const admin = getAdminDatabase();
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("id, status")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profile && (profile as any).status === "suspended") {
+        return createProblemResponse({
+          type: "https://api.grupoj.com.br/v1/errors/account-suspended",
+          title: "Acesso suspenso",
+          status: 403,
+          detail: "Sua conta está temporariamente suspensa pela moderação do Grupo J."
+        });
+      }
+    } catch {
+      // Mantém fluxo caso tabela não responda
+    }
+
     return {
       user: { id: data.user.id, email: data.user.email },
       accessToken,

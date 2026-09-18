@@ -8,7 +8,28 @@ export interface AvatarProps {
   className?: string;
 }
 
+function isSafeImageSrc(url?: string): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:text/html") ||
+    lower.startsWith("vbscript:") ||
+    lower.startsWith("data:image/svg+xml")
+  ) {
+    return false;
+  }
+  return (
+    lower.startsWith("http://") ||
+    lower.startsWith("https://") ||
+    lower.startsWith("/") ||
+    lower.startsWith("data:image/")
+  );
+}
+
 export const Avatar: React.FC<AvatarProps> = ({ name, src, size = "md", className }) => {
+  const safeSrc = isSafeImageSrc(src) ? src : undefined;
   const initials = name
     .split(" ")
     .filter(Boolean)
@@ -32,8 +53,8 @@ export const Avatar: React.FC<AvatarProps> = ({ name, src, size = "md", classNam
       title={name}
       aria-label={name}
     >
-      {src ? (
-        <img src={src} alt={name} className="w-full h-full object-cover" />
+      {safeSrc ? (
+        <img src={safeSrc} alt={name} className="w-full h-full object-cover" />
       ) : (
         <span>{initials || "GJ"}</span>
       )}

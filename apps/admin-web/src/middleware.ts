@@ -63,6 +63,25 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
+    // Verificação de Nível de Garantia de Autenticação (MFA / AAL2)
+    if (user) {
+      try {
+        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalData) {
+          // Se o usuário possui segundo fator cadastrado mas a sessão atual é AAL1
+          if (aalData.nextLevel === "aal2" && aalData.currentLevel === "aal1") {
+            if (pathname !== "/mfa" && !pathname.startsWith("/api/auth")) {
+              return NextResponse.redirect(new URL("/mfa", request.url));
+            }
+          } else if (aalData.currentLevel === "aal2" && pathname === "/mfa") {
+            return NextResponse.redirect(new URL("/dashboard", request.url));
+          }
+        }
+      } catch (mfaErr) {
+        // Log seguro e fallback gracioso sem quebrar acesso
+      }
+    }
+
     return supabaseResponse;
   } catch (error) {
     console.error("Middleware auth error:", error);

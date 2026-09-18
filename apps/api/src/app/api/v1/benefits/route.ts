@@ -137,8 +137,37 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Reutiliza voucher ativo não expirado caso já exista (UX fluida para o motorista)
     const nowIso = new Date().toISOString();
+
+    // 4. Verificação da regra dos 30 dias de carência (grace_period_days)
+    const [{ data: sub }, { data: benefitDef }] = await Promise.all([
+      admin
+        .from("subscriptions")
+        .select("status, created_at, started_at, current_period_end")
+        .eq("customer_id", customer.id)
+        .eq("status", "active")
+        .gt("current_period_end", nowIso)
+        .maybeSingle(),
+      admin
+        .from("benefit_definitions")
+        .select("id, name, grace_period_days")
+        .eq("id", body.benefitDefinitionId)
+        .maybeSingle()
+    ]);
+
+    if (benefitDef && (benefitDef.grace_period_days ?? 0) > 0 && sub) {
+      const startTimestamp = new Date(sub.started_at || sub.created_at).getTime();
+      const elapsedDays = (Date.now() - startTimestamp) / (1000 * 60 * 60 * 24);
+      if (elapsedDays < benefitDef.grace_period_days) {
+        const remainingDays = Math.ceil(benefitDef.grace_period_days - elapsedDays);
+        return createProblemResponse({
+          type: "https://api.grupoj.com.br/v1/errors/grace-period",
+          title: "Benefício em período de carência",
+          status: 403,
+          detail: `Este benefício requer ${benefitDef.grace_period_days} dias de carência da assinatura. Faltam ${remainingDays} dia(s) para liberação.`
+        });
+      }
+    }
     const { data: activeExisting } = await admin
       .from("benefit_redemptions")
       .select("id, voucher_token, voucher_expires_at")

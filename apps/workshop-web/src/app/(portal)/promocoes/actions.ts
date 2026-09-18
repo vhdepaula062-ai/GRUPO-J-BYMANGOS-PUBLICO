@@ -3,6 +3,7 @@
 import { createAdminServerClient } from "@/lib/supabase/admin";
 import { getMyWorkshop } from "@/lib/queries";
 import { revalidatePath } from "next/cache";
+import { isSafeImageUrl, sanitizePlainText } from "@grupo-j/validation";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -29,6 +30,18 @@ export async function createWorkshopPromotionAction(data: {
     const workshopId = await resolveWorkshopId();
     if (!workshopId) return { success: false, error: "Oficina não identificada." };
 
+    const safeTitle = sanitizePlainText(data.title);
+    const safeDescription = sanitizePlainText(data.description);
+    if (!safeTitle) return { success: false, error: "Título é obrigatório." };
+
+    let validatedImageUrl: string | null = null;
+    if (data.imageUrl && data.imageUrl.trim()) {
+      if (!isSafeImageUrl(data.imageUrl.trim())) {
+        return { success: false, error: "Formato de imagem inválido ou protocolo inseguro." };
+      }
+      validatedImageUrl = data.imageUrl.trim();
+    }
+
     const supabase = createAdminServerClient();
 
     const defaultEnd = new Date();
@@ -37,19 +50,19 @@ export async function createWorkshopPromotionAction(data: {
     const startDate = data.startDate || new Date().toISOString().slice(0, 10);
     const endDate = data.endDate || defaultEnd.toISOString().slice(0, 10);
 
-    const fullDescription = data.imageUrl
-      ? `${data.description}\n<!--image_url:${data.imageUrl}-->`
-      : data.description;
+    const fullDescription = validatedImageUrl
+      ? `${safeDescription}\n<!--image_url:${validatedImageUrl}-->`
+      : safeDescription;
 
     const payload: Record<string, any> = {
       workshop_id: workshopId,
-      title: data.title,
+      title: safeTitle,
       description: fullDescription,
       discount_percentage: data.discountPercentage ?? null,
       start_date: startDate,
       end_date: endDate,
       status: "pending_approval",
-      moderation_notes: data.imageUrl || null
+      moderation_notes: validatedImageUrl || null
     };
 
     const { error } = await supabase.from("promotions").insert(payload);

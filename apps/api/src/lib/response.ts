@@ -12,7 +12,12 @@ export function createSuccessResponse<T>(data: T, status = 200, meta?: Record<st
         ...meta
       }
     },
-    { status }
+    {
+      status,
+      headers: {
+        "X-Content-Type-Options": "nosniff"
+      }
+    }
   );
 }
 
@@ -22,7 +27,8 @@ export function createProblemResponse(problem: ProblemDetails) {
   return NextResponse.json(problem, {
     status: problem.status,
     headers: {
-      "Content-Type": "application/problem+json"
+      "Content-Type": "application/problem+json",
+      "X-Content-Type-Options": "nosniff"
     }
   });
 }

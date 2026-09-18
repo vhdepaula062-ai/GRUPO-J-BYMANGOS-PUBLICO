@@ -36,3 +36,26 @@ export async function getAuthenticatedUser() {
   if (error || !user) return null;
   return user;
 }
+
+/**
+ * Exige reautenticação recente para ações sensíveis da oficina.
+ */
+export async function assertRecentAuthentication(maxAgeMinutes = 15): Promise<{ success: boolean; error?: string }> {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return { success: false, error: "Sessão inválida ou não autenticada." };
+  }
+
+  const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
+  const now = Date.now();
+  const maxAgeMs = maxAgeMinutes * 60 * 1000;
+
+  if (now - lastSignIn > maxAgeMs) {
+    return {
+      success: false,
+      error: "Reautenticação obrigatória. Por segurança, confirme sua senha ou faça novo login para realizar esta ação."
+    };
+  }
+
+  return { success: true };
+}

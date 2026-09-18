@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminServerClient } from "@/lib/supabase/admin";
+import { checkIsAdmin, assertRecentAuthentication } from "@/lib/supabase/server";
 import { deleteMotoristaAction } from "../clientes/actions";
 import { revalidatePath } from "next/cache";
 
@@ -21,6 +22,16 @@ export async function approveErasureRequestAction(
       success: false,
       message: "Dados da requisição inválidos."
     };
+  }
+
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { success: false, message: "Acesso não autorizado. Apenas administradores podem processar exclusões." };
+  }
+
+  const recentAuth = await assertRecentAuthentication(15);
+  if (!recentAuth.success) {
+    return { success: false, message: recentAuth.error || "Reautenticação necessária para executar exclusão de dados." };
   }
 
   const supabase = createAdminServerClient();

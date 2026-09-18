@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
+import { isSafeRedirectPath } from "@grupo-j/validation";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = isSafeRedirectPath(searchParams.get("next"), "/dashboard");
 
   if (code) {
     const cookieStore = cookies();

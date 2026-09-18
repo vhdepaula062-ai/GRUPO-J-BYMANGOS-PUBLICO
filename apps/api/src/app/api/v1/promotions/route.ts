@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getAdminDatabase } from "@/lib/auth";
 import { createProblemResponse, createSuccessResponse } from "@/lib/response";
+import { isSafeImageUrl, sanitizePlainText } from "@grupo-j/validation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -32,16 +33,17 @@ export async function GET(_request: NextRequest) {
 
     const match = cleanDesc.match(/<!--image_url:(.*?)-->/);
     if (match && match[1]) {
-      imageUrl = match[1].trim();
-      cleanDesc = cleanDesc.replace(/<!--image_url:.*?-->/, "").trim();
-    } else if (promo.moderation_notes && (promo.moderation_notes.startsWith("http") || promo.moderation_notes.startsWith("data:image"))) {
+      const candidate = match[1].trim();
+      imageUrl = isSafeImageUrl(candidate) ? candidate : null;
+      cleanDesc = cleanDesc.replace(/<!--image_url:.*?-->/g, "").trim();
+    } else if (promo.moderation_notes && isSafeImageUrl(promo.moderation_notes.trim())) {
       imageUrl = promo.moderation_notes.trim();
     }
 
     return {
       id: promo.id,
-      title: promo.title,
-      description: cleanDesc,
+      title: sanitizePlainText(promo.title),
+      description: sanitizePlainText(cleanDesc),
       image_url: imageUrl,
       discount_percentage: promo.discount_percentage,
       price_cents: promo.price_cents,
