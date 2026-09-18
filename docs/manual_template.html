@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual Simplificado de Uso — Ecossistema Grupo J</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm 14mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #0F172A;
+      background-color: #FFFFFF;
+      font-size: 10pt;
+      line-height: 1.5;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    .no-break {
+      page-break-inside: avoid;
+    }
+
+    /* HEADER & BRANDING */
+    .header {
+      background: linear-gradient(135deg, #00091D 0%, #041438 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #1E293B;
+    }
+
+    .brand-title {
+      font-size: 22pt;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #FFFFFF;
+    }
+
+    .brand-subtitle {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #38BDF8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    .brand-desc {
+      font-size: 9pt;
+      color: #94A3B8;
+      margin-top: 4px;
+    }
+
+    .pill-badge {
+      background: rgba(3, 78, 254, 0.2);
+      border: 1px solid #034EFE;
+      color: #93C5FD;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* SECTION TITLE */
+    .section-title {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #00091D;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 18px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid #E2E8F0;
+      padding-bottom: 6px;
+    }
+
+    .section-number {
+      background: #034EFE;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10pt;
+      font-weight: 800;
+    }
+
+    /* CARDS & GRIDS */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 14px;
+      position: relative;
+    }
+
+    .card-highlight {
+      background: #EFF6FF;
+      border-color: #BFDBFE;
+    }
+
+    .card-dark {
+      background: #00091D;
+      color: white;
+      border-color: #1E293B;
+    }
+
+    .card-dark h4 {
+      color: white;
+    }
+
+    .card-dark p {
+      color: #94A3B8;
+    }
+
+    .card-title {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card p {
+      font-size: 9pt;
+      color: #475569;
+      line-height: 1.45;
+    }
+
+    /* STEP FLOW */
+    .step-box {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      background: white;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      background: #034EFE;
+      color: white;
+      min-width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9pt;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    .step-content h4 {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    .step-content p {
+      font-size: 8.5pt;
+      color: #64748B;
+      margin-top: 2px;
+    }
+
+    /* CALLOUT BOXES */
+    .alert-box {
+      background: #FEF3C7;
+      border-left: 4px solid #F59E0B;
+      color: #92400E;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 8.5pt;
+      margin-top: 10px;
+      margin-bottom: 12px;
+    }
+
+    .alert-box strong {
+      color: #78350F;
+    }
+
+    .tip-box {
+      background: #ECFDF5;
+      border-left: 4px solid #10B981;
+      color: #065F46;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 8.5pt;
+      margin-top: 10px;
+      margin-bottom: 12px;
+    }
+
+    /* LINKS TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 14px 0;
+      font-size: 8.5pt;
+    }
+
+    th {
+      background: #00091D;
+      color: white;
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 700;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #E2E8F0;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #F8FAFC;
+    }
+
+    .url-tag {
+      font-family: monospace;
+      background: #E2E8F0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      color: #034EFE;
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 1px solid #E2E8F0;
+      text-align: center;
+      font-size: 8pt;
+      color: #94A3B8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1: VISÃO GERAL E O APLICATIVO ==================== -->
+  
+  <div class="header">
+    <div>
+      <div class="brand-title">GRUPO J</div>
+      <div class="brand-subtitle">Manual de Uso do Ecossistema</div>
+      <div class="brand-desc">Guia Rápido e Descomplicado para Operação da Plataforma</div>
+    </div>
+    <div style="text-align: right;">
+      <span class="pill-badge">Versão Oficial 2026</span>
+      <div style="font-size: 8pt; color: #94A3B8; margin-top: 6px;">Exclusivo para Joaquim e Equipe</div>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">1</span> O que é o Ecossistema Grupo J?
+  </div>
+
+  <p style="font-size: 9pt; color: #475569; margin-bottom: 12px;">
+    O <strong>Grupo J</strong> é a plataforma digital pioneira de prevenção veicular por assinatura. Pense nele como o <em>"plano de saúde do carro"</em>: o motorista paga uma mensalidade acessível de <strong>R$ 50,00/mês</strong> e tem direito a 4 serviços essenciais preventivos garantidos, realizados exclusivamente em oficinas credenciadas de qualidade.
+  </p>
+
+  <div class="grid-3 no-break">
+    <div class="card card-highlight">
+      <div class="card-title">📱 Aplicativo Mobile</div>
+      <p>Usado pelos <strong>Motoristas</strong> no smartphone para ver seu plano, escolher a oficina parceira de confiança e gerar vouchers de atendimento.</p>
+    </div>
+    <div class="card card-highlight">
+      <div class="card-title">🔧 Portal das Oficinas</div>
+      <p>Usado pelos <strong>Donos e Mecânicos</strong> das oficinas credenciadas para validar os vouchers em menos de 1 minuto e acompanhar repasses.</p>
+    </div>
+    <div class="card card-dark">
+      <div class="card-title" style="color: #38BDF8;">👑 Painel da Diretoria</div>
+      <p>O centro de comando exclusivo do <strong>Joaquim (Diretoria)</strong> para aprovar oficinas, moderar promoções e gerenciar o faturamento.</p>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">2</span> Como o Motorista (Cliente) Usa o Aplicativo
+  </div>
+
+  <p style="font-size: 9pt; color: #475569; margin-bottom: 10px;">
+    O aplicativo foi desenhado para ser extremamente simples e direto. Não há menus complicados:
+  </p>
+
+  <div class="no-break">
+    <div class="step-box">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Baixar e Abrir o App</h4>
+        <p>O cliente instala o aplicativo no smartphone Android através do link ou arquivo enviado pelo Grupo J. Ao abrir, verá a logo oficial e uma tela moderna de boas-vindas.</p>
+      </div>
+    </div>
+
+    <div class="step-box">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Cadastro em Menos de 2 Minutos</h4>
+        <p>O motorista informa seu Nome, Telefone (WhatsApp) e cadastra a Placa e Modelo do seu veículo.</p>
+      </div>
+    </div>
+
+    <div class="step-box">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Assinatura do Plano (R$ 50,00/mês)</h4>
+        <p>Garante cobertura imediata para 4 manutenções essenciais: Check-up Preventivo de 30 itens, Rodízio e Calibragem de Pneus, Cristalização de Parabrisa e Higienização de Cabine.</p>
+      </div>
+    </div>
+
+    <div class="step-box">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h4>Escolha da Oficina Credenciada</h4>
+        <p>O motorista visualiza a lista de oficinas parceiras da sua região e seleciona onde deseja ser atendido. <em>(Regra comercial: a oficina escolhida fica fixa por 30 dias para garantir o repasse à oficina parceira)</em>.</p>
+      </div>
+    </div>
+
+    <div class="step-box">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h4>Gerar Voucher e Ir até a Oficina</h4>
+        <p>Quando for levar o carro, ele clica em <strong>"Resgatar Benefício"</strong>. O aplicativo gera na hora um código de voucher (ex: <code>VOUCHER-7X89</code>) que ele mostra no balcão da oficina.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box no-break">
+    💡 <strong>Dica para o Cliente:</strong> O motorista não precisa levar dinheiro nem cartão na oficina para os 4 serviços inclusos. Tudo é resolvido pelo voucher digital!
+  </div>
+
+  <!-- ==================== PÁGINA 2: O PORTAL DAS OFICINAS ==================== -->
+  <div class="page-break"></div>
+
+  <div class="header">
+    <div>
+      <div class="brand-title">PORTAL DAS OFICINAS</div>
+      <div class="brand-subtitle">Guia Prático para o Mecânico e Atendente</div>
+      <div class="brand-desc">Como atender os clientes do Grupo J e registrar serviços</div>
+    </div>
+    <div>
+      <span class="pill-badge">B2B Parceiros</span>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">3</span> Como a Oficina Opera no Dia a Dia
+  </div>
+
+  <p style="font-size: 9pt; color: #475569; margin-bottom: 12px;">
+    As oficinas credenciadas acessam o sistema pela internet através do link oficial: <span class="url-tag">https://grupo-j-oficinas.vercel.app</span> em qualquer computador, tablet ou celular.
+  </p>
+
+  <div class="grid-2 no-break">
+    <div class="card">
+      <div class="card-title">📝 Como uma Oficina Entra na Rede?</div>
+      <p>A oficina entra na página pública e clica em <strong>"Seja Parceiro"</strong> (ou acessa <code>/seja-parceiro</code>), preenche Nome da Oficina, CNPJ, Telefone e Endereço. A proposta cai direto na mesa do Joaquim para aprovação.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🔑 Acesso ao Painel da Oficina</div>
+      <p>Após ser aprovada pelo Joaquim, o responsável entra com seu e-mail e senha. Ele verá o nome da sua oficina no topo e o botão de destaque: <strong>"⚡ Novo Check-in de Veículo"</strong>.</p>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">4</span> O Procedimento de Atendimento (Validador de 120 Segundos)
+  </div>
+
+  <p style="font-size: 9pt; color: #475569; margin-bottom: 10px;">
+    Quando o cliente do Grupo J estaciona o carro na oficina, o atendente faz apenas 3 passos rápidos:
+  </p>
+
+  <div class="no-break">
+    <div class="step-box">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Digitar o Código do Voucher ou a Placa</h4>
+        <p>No painel da oficina, o mecânico clica em <strong>"Novo Check-in"</strong> e digita o código do voucher que está no celular do cliente (ou simplesmente a placa do carro).</p>
+      </div>
+    </div>
+
+    <div class="step-box">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Conferência Automática em Tela</h4>
+        <p>O sistema confere na hora se o cliente está com a mensalidade em dia e mostra na tela qual serviço preventivo ele veio fazer (ex: <em>Check-up Preventivo 30 Itens</em>).</p>
+      </div>
+    </div>
+
+    <div class="step-box">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Validar e Liberar o Box</h4>
+        <p>O atendente clica em <strong>"Confirmar Check-in"</strong>. Pronto! O atendimento está registrado no sistema, o cliente recebe a confirmação no app e a oficina garante o registro do serviço.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">5</span> Enviar Promoções para os Motoristas
+  </div>
+
+  <p style="font-size: 9pt; color: #475569; margin-bottom: 10px;">
+    Além dos 4 serviços do plano, a oficina pode vender outros serviços (troca de óleo, pastilhas, pneus) para a base de clientes do Grupo J:
+  </p>
+
+  <div class="card card-highlight no-break">
+    <p>Na aba <strong>"Promoções"</strong> do portal da oficina, o proprietário clica em <strong>"Nova Promoção"</strong>, coloca a foto da oferta, a porcentagem de desconto (ex: 15% OFF na Troca de Pastilhas) e envia. A promoção é revisada pelo Joaquim e aparece diretamente no celular dos motoristas daquela região!</p>
+  </div>
+
+  <div class="alert-box no-break">
+    ⚠️ <strong>Atenção da Oficina:</strong> Cada oficina só enxerga os clientes vinculados à sua própria unidade. Uma oficina parceira nunca tem acesso aos dados ou faturamento de outra oficina credenciada.
+  </div>
+
+  <!-- ==================== PÁGINA 3: O PAINEL DA DIRETORIA (JOAQUIM) ==================== -->
+  <div class="page-break"></div>
+
+  <div class="header">
+    <div>
+      <div class="brand-title">PAINEL ADMINISTRATIVO</div>
+      <div class="brand-subtitle">Centro de Controle da Diretoria (Joaquim)</div>
+      <div class="brand-desc">Gestão completa, aprovações de parceiros e supervisão em tempo real</div>
+    </div>
+    <div>
+      <span class="pill-badge" style="background: rgba(234, 179, 8, 0.2); border-color: #EAB308; color: #FEF08A;">Acesso Gestor</span>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">6</span> Como o Joaquim Controla Toda a Operação
+  </div>
+
+  <p style="font-size: 9pt; color: #475569; margin-bottom: 12px;">
+    O Painel Administrativo Central está disponível no link: <span class="url-tag">https://grupo-j-admin.vercel.app/login</span>. É o cérebro da empresa.
+  </p>
+
+  <div class="card card-highlight no-break" style="margin-bottom: 14px;">
+    <div class="card-title">🔐 Suas Credenciais Oficiais de Acesso:</div>
+    <div style="font-size: 9.5pt; margin-top: 6px; color: #0F172A;">
+      <strong>E-mail:</strong> <span class="url-tag">admin@grupoj.com.br</span><br>
+      <strong>Senha Provisória:</strong> <span class="url-tag">GrupoJ#Admin2026!Seguro</span>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">7</span> As Principais Telas que Você Vai Usar
+  </div>
+
+  <div class="grid-2 no-break">
+    <div class="card">
+      <div class="card-title">📊 1. Visão Geral (Dashboard)</div>
+      <p>Veja os números em tempo real: total de assinantes ativos, quantidade de oficinas na rede, receita mensal estimada (MRR) e botão de <strong>"Sincronizar Todo o Ecossistema"</strong> para forçar atualização instantânea.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🏢 2. Aba Oficinas Parceiras</div>
+      <p>Aqui você vê todas as oficinas cadastradas. Quando uma nova oficina pede credenciamento pelo site, ela aparece na aba <strong>"Pendentes"</strong>. Você confere os dados e clica em <strong>"Aprovar"</strong> para ativá-la na rede.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">📢 3. Aba Promoções</div>
+      <p>Mesa de moderação: revise as ofertas que as oficinas criaram antes de irem para o app. Se a promoção estiver adequada, clique em <strong>"Aprovar"</strong> e ela aparecerá no app dos motoristas.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">👥 4. Aba Motoristas (Clientes)</div>
+      <p>Consulte todos os motoristas cadastrados no aplicativo, qual carro possuem e em qual oficina estão vinculados. Permite também atender pedidos da LGPD com 1 clique.</p>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span class="section-number">8</span> Resumo de Links e Acessos Definitivos
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Componente</th>
+        <th>Para quem serve?</th>
+        <th>Endereço na Internet (Link)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Painel Administrativo</strong></td>
+        <td>Diretoria &amp; Joaquim</td>
+        <td><span class="url-tag">https://grupo-j-admin.vercel.app</span></td>
+      </tr>
+      <tr>
+        <td><strong>Portal das Oficinas</strong></td>
+        <td>Centros Automotivos e Mecânicos</td>
+        <td><span class="url-tag">https://grupo-j-oficinas.vercel.app/login</span></td>
+      </tr>
+      <tr>
+        <td><strong>Site Oficial &amp; Credenciamento</strong></td>
+        <td>Público Geral &amp; Novas Oficinas</td>
+        <td><span class="url-tag">https://grupo-j-oficinas.vercel.app/seja-parceiro</span></td>
+      </tr>
+      <tr>
+        <td><strong>Aplicativo Android (APK)</strong></td>
+        <td>Motoristas &amp; Assinantes</td>
+        <td>Arquivo <code>grupo-j-staging.apk</code> instalado no celular</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="section-title">
+    <span class="section-number">9</span> Perguntas Frequentes (FAQ Descomplicado)
+  </div>
+
+  <div class="no-break">
+    <p style="font-size: 8.5pt; margin-bottom: 6px;">
+      <strong>• O que é a regra dos 30 dias para troca de oficina?</strong><br>
+      Quando o motorista escolhe uma oficina credenciada, ele fica vinculado a ela por 30 dias. Isso foi criado para proteger a oficina parceira, garantindo previsibilidade de clientes e evitando que o motorista mude de ideia toda semana.
+    </p>
+    <p style="font-size: 8.5pt; margin-bottom: 6px;">
+      <strong>• Como funciona a cobrança financeira agora?</strong><br>
+      Os sistemas estão prontos para receber o gateway oficial de pagamentos (Mercado Pago). Enquanto aguardamos as credenciais finais da sua conta bancária/gateway, o sistema opera em modo controlado, sem cobrar valores fictícios.
+    </p>
+    <p style="font-size: 8.5pt;">
+      <strong>• Se eu esquecer a senha de administrador, o que faço?</strong><br>
+      Acesse o link do admin e use a opção "Esqueceu a chave?" ou solicite o reset seguro à equipe técnica.
+    </p>
+  </div>
+
+  <div class="footer">
+    Ecossistema Digital Grupo J — Documento de Instrução Operacional e Entrega Oficial • 2026
+  </div>
+
+</body>
+</html>
