@@ -1,6 +1,9 @@
 // Server Component — busca dados reais do Supabase
 import React from "react";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import {
   PageHeader,
   KpiCard,

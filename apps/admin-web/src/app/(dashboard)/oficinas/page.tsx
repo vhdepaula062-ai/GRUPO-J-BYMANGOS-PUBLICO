@@ -1,5 +1,8 @@
 // Server Component — lista oficial de oficinas do Supabase com moderação de cadastros
 import React from "react";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { PageHeader } from "@grupo-j/ui-web";
 import { getWorkshops } from "@/lib/queries";
 import { OficinasModerator } from "./OficinasModerator";

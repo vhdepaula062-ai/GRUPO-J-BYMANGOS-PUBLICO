@@ -3,6 +3,7 @@ import { getTransactions } from "@/lib/queries";
 import { FinanceiroClient } from "./FinanceiroClient";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function FinanceiroAdminPage() {
   const transactions = await getTransactions();
