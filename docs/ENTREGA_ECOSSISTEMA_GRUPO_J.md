@@ -26,9 +26,9 @@
 
 | Componente | URL de Produção | Deployment ID / URL Imutável | Status |
 | :--- | :--- | :--- | :--- |
-| **API REST Central** | [https://grupo-j-api.vercel.app](https://grupo-j-api.vercel.app) | `dpl_LgKAcPsWybQgTpLkN1HpboP5dQKs`<br>`https://grupo-j-phug7gfzj-vhdepaula062-1705s-projects.vercel.app` | **200 OK** (`healthy`) |
-| **SaaS Administrativo** | [https://grupo-j-admin.vercel.app](https://grupo-j-admin.vercel.app) | `dpl_5P7YqXU5GWfUuCbP4eh3XUjPz1CV`<br>`https://grupo-j-admin-7rjbqufsb-vhdepaula062-1705s-projects.vercel.app` | **200 OK** |
-| **Portal das Oficinas & Landing Page** | [https://grupo-j-oficinas.vercel.app](https://grupo-j-oficinas.vercel.app) | `dpl_AANxoELJWUZ3UtYqRWzPvKN3iouZ`<br>`https://grupo-j-oficinas-mm5el63ix-vhdepaula062-1705s-projects.vercel.app` | **200 OK** |
+| **API REST Central** | [https://grupo-j-api.vercel.app](https://grupo-j-api.vercel.app) | `dpl_D1ioJVaY67FPTW15TgvWSY3HVvVg`<br>`https://grupo-j-bnefxgfcg-vhdepaula062-1705s-projects.vercel.app` | **200 OK** (`healthy`) |
+| **SaaS Administrativo** | [https://grupo-j-admin.vercel.app](https://grupo-j-admin.vercel.app) | `dpl_4cBoKF2n9aV3KPGCHaJuHEyfrmgp`<br>`https://grupo-j-admin-ols8t76t3-vhdepaula062-1705s-projects.vercel.app` | **200 OK** |
+| **Portal das Oficinas & Landing Page** | [https://grupo-j-oficinas.vercel.app](https://grupo-j-oficinas.vercel.app) | `dpl_DP1Kuc1hTXtDAeiEuBCBxvqLNdH2`<br>`https://grupo-j-oficinas-cxet3lwqv-vhdepaula062-1705s-projects.vercel.app` | **200 OK** |
 
 ---
 
