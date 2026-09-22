@@ -16,15 +16,13 @@ jobs:
       - name: Checkout do Repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.x
-
-      - name: Instalar pnpm
-        uses: pnpm/action-setup@v4
+      - name: Configurar Node.js e pnpm
+        uses: pnpm/setup@v1
         with:
           version: 12.4.1
+          runtime: node@24
+          cache: true
+          install: false
 
       - name: Instalar Dependências
         run: pnpm install --frozen-lockfile
