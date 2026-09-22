@@ -60,27 +60,15 @@ export async function authenticateRequest(
       });
     }
 
-    // Verificação de revogação/suspensão no banco de dados
-    try {
-      const admin = getAdminDatabase();
-      const { data: profile } = await admin
-        .from("profiles")
-        .select("id, status")
-        .eq("id", data.user.id)
-        .maybeSingle();
-
-      if (profile && (profile as any).status === "suspended") {
-        return createProblemResponse({
-          type: "https://api.grupoj.com.br/v1/errors/account-suspended",
-          title: "Acesso suspenso",
-          status: 403,
-          detail: "Sua conta está temporariamente suspensa pela moderação do Grupo J."
-        });
-      }
-    } catch {
-      // Mantém fluxo caso tabela não responda
+    // Check fresh identity metadata controlled by administrators, not editable user metadata.
+    if (data.user.app_metadata?.account_status === "suspended") {
+      return createProblemResponse({type:"https://api.grupoj.com.br/v1/errors/account-suspended",title:"Acesso suspenso",status:403,detail:"Contate o atendimento para revisar sua conta."});
     }
+    const {data: profile,error: profileError} = await getAdminDatabase().from("profiles").select("id").eq("id",data.user.id).maybeSingle();
+    if (profileError || !profile) return createProblemResponse({type:"https://api.grupoj.com.br/v1/errors/identity-unavailable",title:"Cadastro indisponível",status:503,detail:"Não foi possível confirmar o cadastro."});
 
+    const permitted=await db.rpc("is_session_permitted");
+    if(permitted.error||permitted.data!==true)return createProblemResponse({type:"about:blank",title:"Confirmação de autenticação necessária",status:403,detail:"Conclua a autenticação ou entre novamente."});
     return {
       user: { id: data.user.id, email: data.user.email },
       accessToken,

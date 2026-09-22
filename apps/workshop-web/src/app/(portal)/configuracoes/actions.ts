@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAuthorizedWorkshopClient } from "@/lib/supabase/authorized";
+import { workshopProfileUpdateSchema } from "@grupo-j/validation";
 import { getMyWorkshop } from "@/lib/queries";
 
 export async function updateWorkshopProfile(input: {
@@ -12,8 +13,11 @@ export async function updateWorkshopProfile(input: {
 }) {
   const workshop = await getMyWorkshop();
   const organizationId = workshop?.organization?.id as string | undefined;
+  if (!workshop || !["owner","manager"].includes(workshop.role)) throw new Error("Acesso não autorizado para alterar o cadastro.");
   if (!organizationId) throw new Error("Oficina não identificada.");
-  const supabase = createServerSupabaseClient();
+  const valid=workshopProfileUpdateSchema.parse(input);
+  input=valid;
+  const supabase = await createAuthorizedWorkshopClient(organizationId,true);
   const { error } = await supabase.from("organizations").update({
     trade_name: input.tradeName.trim(),
     legal_name: input.legalName.trim(),

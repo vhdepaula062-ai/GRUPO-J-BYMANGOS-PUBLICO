@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { checkIsAdmin, createServerSupabaseClient } from "@/lib/supabase/server";
 
 export interface SyncEcosystemResult {
   success: boolean;
@@ -23,9 +23,10 @@ export interface SyncEcosystemResult {
  */
 export async function syncEcosystemAction(): Promise<SyncEcosystemResult> {
   const startTime = Date.now();
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   try {
+    if (!(await checkIsAdmin())) throw new Error("Acesso não autorizado");
     // 1. Revalidação instantânea de todos os caminhos do ecossistema
     revalidatePath("/", "layout");
     revalidatePath("/dashboard");
@@ -44,9 +45,9 @@ export async function syncEcosystemAction(): Promise<SyncEcosystemResult> {
       customersResult,
       benefitsResult
     ] = await Promise.all([
-      supabase.from("organizations").select("*", { count: "exact", head: true }).eq("status", "active"),
-      supabase.from("customers").select("*", { count: "exact", head: true }),
-      supabase.from("benefit_definitions").select("*", { count: "exact", head: true }).eq("is_active", true)
+      supabase.from("organizations").select("id", { count: "exact", head: true }).eq("status", "active"),
+      supabase.from("customers").select("id", { count: "exact", head: true }),
+      supabase.from("benefit_definitions").select("id", { count: "exact", head: true }).eq("is_active", true)
     ]);
 
     const queryError = workshopsResult.error || customersResult.error || benefitsResult.error;
@@ -58,19 +59,19 @@ export async function syncEcosystemAction(): Promise<SyncEcosystemResult> {
       success: true,
       timestamp: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
       latencyMs: totalLatency,
-      message: `Ecossistema sincronizado com o banco de dados (${totalLatency}ms).`,
+      message: `Consultas do administrativo atualizadas (${totalLatency}ms).`,
       nodes: {
         admin: {
           name: "Governança & RLS Central",
           status: "synced",
-          latencyMs: Math.round(totalLatency * 0.35),
-          rls: "Ativo & Isolado"
+          latencyMs: totalLatency,
+          rls: "Não auditado nesta consulta"
         },
         workshops: {
           name: "Rede de Centros Automotivos",
           status: "synced",
           activeCount: workshopsResult.count ?? 0,
-          latencyMs: Math.round(totalLatency * 0.35)
+          latencyMs: totalLatency
         },
         customers: {
           name: "Motoristas & Catálogo de Benefícios",

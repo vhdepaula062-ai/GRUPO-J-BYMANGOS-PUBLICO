@@ -16,15 +16,15 @@ import { exportToCsv } from "@/lib/exportCsv";
 interface Props {
   transactions: TransactionRow[];
   totalRecebidoCents: number;
-  totalRepassesCents: number;
-  saldoLiquidoCents: number;
+  totalPendenteCents: number;
+  totalEstornadoCents: number;
 }
 
 export function FinanceiroClient({
   transactions,
   totalRecebidoCents,
-  totalRepassesCents,
-  saldoLiquidoCents
+  totalPendenteCents,
+  totalEstornadoCents
 }: Props) {
   const handleExportCsv = () => {
     exportToCsv(
@@ -54,7 +54,7 @@ export function FinanceiroClient({
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Fluxo Financeiro & Liquidações</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Conciliação de assinaturas de motoristas, mensalidades B2B e repasses automáticos para oficinas.
+            Pagamentos registrados de motoristas e oficinas. Cadastros e vouchers não representam recebimentos.
           </p>
         </div>
         <div>
@@ -69,14 +69,14 @@ export function FinanceiroClient({
         </div>
       </div>
 
-      {/* Cards de Métricas Financeiras Reais */}
+      <p className="text-sm text-amber-800 bg-amber-50 p-4 rounded-xl">Valores brutos de todo o histórico registrado, sem conciliação bancária. Repasses, taxas e saldo bancário ainda não estão integrados; não é possível calcular lucro ou saldo líquido. O gateway ainda não está homologado.</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <ArrowDownLeft className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Entradas Liquidadas</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pagamentos confirmados</p>
             <p className="text-2xl font-black text-slate-900 mt-0.5">{formatCents(totalRecebidoCents)}</p>
             <span className="text-[11px] text-emerald-700 font-semibold">Assinaturas e Mensalidades</span>
           </div>
@@ -87,9 +87,9 @@ export function FinanceiroClient({
             <ArrowUpRight className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Repasses a Oficinas</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">{formatCents(totalRepassesCents)}</p>
-            <span className="text-[11px] text-rose-700 font-semibold">Vouchers preventivos executados</span>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pendentes / autorizados</p>
+            <p className="text-2xl font-black text-slate-900 mt-0.5">{formatCents(totalPendenteCents)}</p>
+            <span className="text-[11px] text-rose-700 font-semibold">Ainda não recebidos</span>
           </div>
         </div>
 
@@ -98,9 +98,9 @@ export function FinanceiroClient({
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Saldo Líquido Grupo J</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">{formatCents(saldoLiquidoCents)}</p>
-            <span className="text-[11px] text-blue-700 font-semibold">Margem operacional retida</span>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Estornos / contestações</p>
+            <p className="text-2xl font-black text-slate-900 mt-0.5">{formatCents(totalEstornadoCents)}</p>
+            <span className="text-[11px] text-blue-700 font-semibold">Excluídos dos recebimentos</span>
           </div>
         </div>
       </div>
@@ -122,7 +122,7 @@ export function FinanceiroClient({
             <div className="max-w-md mx-auto">
               <h3 className="text-base font-bold text-slate-900">Nenhuma movimentação financeira registrada</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Todas as cobranças processadas via gateway PagSeguro e repasses efetuados às oficinas aparecerão com hash auditável nesta tabela.
+                Somente pagamentos persistidos aparecem neste extrato. O gateway ainda depende de integração e homologação.
               </p>
             </div>
           </div>

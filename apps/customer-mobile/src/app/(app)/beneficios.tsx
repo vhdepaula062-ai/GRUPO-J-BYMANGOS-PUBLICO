@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
+import { MobileCard, MobileBadge, MobileButton, MobileEmptyState } from "@grupo-j/ui-mobile";
+import { useRouter } from "expo-router";
 import { tokens } from "@grupo-j/design-tokens";
 import { api } from "../../lib/api";
 import { useApiResource } from "../../hooks/useApiResource";
@@ -12,9 +13,12 @@ interface ServiceBenefit {
   available_quantity: number;
   benefit: { id: string; name: string; description: string; periodicity: string };
 }
-type Vehicle = { id: string };
+type Vehicle = { id: string;plate:string;model:string };
 
 export default function BeneficiosScreen() {
+  const router = useRouter();
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [selectedVehicle,setSelectedVehicle]=useState<string|null>(null);
   const [activeVoucher, setActiveVoucher] = useState<{
     code: string;
     benefitName: string;
@@ -26,6 +30,14 @@ export default function BeneficiosScreen() {
   }, []);
   const { data, loading, error, reload } = useApiResource(load);
   const [refreshing, setRefreshing] = useState(false);
+  const vehicles = data?.vehicles ?? [];
+  const benefits = data?.benefits ?? [];
+
+  useEffect(() => {
+    if (data && !data.vehicles.some(vehicle => vehicle.id === selectedVehicle)) {
+      setSelectedVehicle(data.vehicles[0]?.id ?? null);
+    }
+  }, [data, selectedVehicle]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -45,13 +57,16 @@ export default function BeneficiosScreen() {
     return () => clearInterval(interval);
   }, [activeVoucher]);
 
-  const generateVoucher = async (benefit: ServiceBenefit) => {
-    const vehicle = data?.vehicles[0];
+  const generateVoucher = async (benefit: ServiceBenefit, selected?:Vehicle) => {
+    if (generatingId || benefit.available_quantity <= 0) return;
+    const vehicle = selected??data?.vehicles.find(v=>v.id===selectedVehicle)??data?.vehicles[0];
     if (!vehicle) return Alert.alert("Veículo necessário", "Cadastre um veículo antes de gerar o voucher.");
+    setGeneratingId(benefit.id);
     try {
       const response = await api.post<{ voucherCode: string; expiresAt: string }, { vehicleId: string; benefitDefinitionId: string }>("/api/v1/benefits", { vehicleId: vehicle.id, benefitDefinitionId: benefit.benefit.id });
       setActiveVoucher({ code: response.data.voucherCode, benefitName: benefit.benefit.name, secondsRemaining: Math.max(0, Math.floor((new Date(response.data.expiresAt).getTime() - Date.now()) / 1000)) });
     } catch (cause) { Alert.alert("Voucher não gerado", cause instanceof Error ? cause.message : "Tente novamente."); }
+    finally { setGeneratingId(null); }
   };
 
   return (
@@ -71,19 +86,22 @@ export default function BeneficiosScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Serviços Inclusos no Plano</Text>
           <Text style={styles.subtitle}>
-            Assinatura R$ 50,00/mês • Cobertura preventiva garantida Grupo J
+            Consulte seu saldo, a carência e a vigência de cada benefício
           </Text>
         </View>
         {loading ? <ActivityIndicator /> : null}
-        {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
+        {error ? <View><Text accessibilityRole="alert" style={{ color: tokens.colors.status.danger }}>{error}</Text><MobileButton label="Tentar novamente" variant="outline" onPress={()=>void reload()}/></View> : null}
 
+        <Text style={styles.sectionTitle}>Veículo para o atendimento</Text>
+        {!loading && !error && vehicles.length === 0 ? <MobileCard><MobileEmptyState title="Nenhum veículo cadastrado" description="Cadastre seu veículo para utilizar os benefícios disponíveis na sua conta." action={<MobileButton label="Cadastrar veículo" onPress={()=>router.push("/(app)/veiculos")}/>}/></MobileCard> : null}
+        {(data?.vehicles??[]).map((v,i)=><MobileButton key={v.id} label={(selectedVehicle===v.id||(!selectedVehicle&&i===0)?"✓ ":"")+v.plate+" — "+v.model} variant="outline" onPress={()=>setSelectedVehicle(v.id)}/>)}
         {/* Modal / Card de Voucher Ativo */}
         {activeVoucher && (
           <View style={styles.voucherModal}>
             <View style={styles.voucherHeader}>
               <View>
                 <Text style={styles.voucherTitle}>{activeVoucher.benefitName}</Text>
-                <Text style={styles.voucherSubtitle}>Voucher Temporário com Assinatura Digital</Text>
+                <Text style={styles.voucherSubtitle}>Voucher temporário</Text>
               </View>
               <MobileBadge
                 label={`Expira em ${activeVoucher.secondsRemaining}s`}
@@ -104,6 +122,7 @@ export default function BeneficiosScreen() {
 
         {/* Lista dos 4 Serviços do Plano */}
         <Text style={styles.sectionTitle}>Saldo e Disponibilidade de Serviços</Text>
+        {!loading && !error && benefits.length === 0 ? <MobileCard><MobileEmptyState title="Nenhum benefício disponível" description="Os benefícios dependem do plano e da vigência da sua assinatura. Consulte a situação no Perfil. Se precisar de ajuda, abra um protocolo em Atendimento." action={<MobileButton label="Consultar meu perfil" variant="outline" onPress={()=>router.push("/(app)/perfil")}/>}/></MobileCard> : null}
         <View style={styles.list}>
           {(data?.benefits ?? []).map((benefit) => (
             <MobileCard key={benefit.id}>
@@ -123,9 +142,11 @@ export default function BeneficiosScreen() {
               </View>
               <View style={styles.cardFooter}>
                 <MobileButton
-                  label="⚡ Gerar Voucher de Atendimento"
+                  label={benefit.available_quantity <= 0 ? "Saldo esgotado neste período" : "Gerar voucher de atendimento"}
                   variant="primary"
                   size="sm"
+                  disabled={!vehicles.length || benefit.available_quantity <= 0 || generatingId !== null}
+                  isLoading={generatingId === benefit.id}
                   onPress={() => void generateVoucher(benefit)}
                 />
               </View>
@@ -144,7 +165,11 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.colors.surface.subtle
   },
   scroll: {
-    padding: 20
+    padding: 20,
+    paddingBottom: 32,
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center"
   },
   header: {
     marginBottom: 20
@@ -269,3 +294,5 @@ const styles = StyleSheet.create({
     marginTop: 2
   }
 });
+
+export {ScreenErrorBoundary as ErrorBoundary} from "../../components/ScreenErrorBoundary";

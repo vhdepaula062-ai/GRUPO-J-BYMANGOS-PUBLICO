@@ -23,7 +23,7 @@ describe("ETAPA 1: AUTORIZAÇÃO, ISOLAMENTO E CONTROLE DE ACESSO (RBAC / MULTI-
         if (idx > 0) {
           const k = line.substring(0, idx).trim();
           const v = line.substring(idx + 1).trim().replace(/^['"]|['"]$/g, "");
-          process.env[k] = v;
+          if(k!=="NODE_ENV")process.env[k] = v;
         }
       }
     }
@@ -63,7 +63,7 @@ describe("ETAPA 1: AUTORIZAÇÃO, ISOLAMENTO E CONTROLE DE ACESSO (RBAC / MULTI-
         method: "PATCH",
         body: JSON.stringify({ color: "Azul" })
       });
-      const res = await updateVehicleHandler(req, { params: { id: "00000000-0000-0000-0000-000000000001" } });
+      const res = await updateVehicleHandler(req, { params: Promise.resolve({ id: "00000000-0000-0000-0000-000000000001" }) });
       expect(res.status).toBe(401);
     });
 

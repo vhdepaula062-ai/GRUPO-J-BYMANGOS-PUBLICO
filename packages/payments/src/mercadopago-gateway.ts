@@ -60,25 +60,7 @@ export class MercadoPagoPaymentGateway implements PaymentGateway {
     return signatureHeader === expectedSignature;
   }
 
-  normalizeEvent(payload: Record<string, unknown>): NormalizedPaymentEvent {
-    const type = payload.type as string;
-    let eventType: NormalizedPaymentEvent["eventType"] = "payment_approved";
-
-    if (type === "payment.created") {
-      eventType = "payment_approved";
-    } else if (type === "subscription_preapproval.cancelled") {
-      eventType = "subscription_canceled";
-    }
-
-    const eventId = payload.id as string | undefined;
-    if (!eventId) throw new Error("Webhook Mercado Pago sem identificador do evento.");
-    return {
-      eventId,
-      eventType,
-      gatewaySubscriptionId: payload.subscription_id as string | undefined,
-      amountCents: (payload.amount as number) || 5000,
-      occurredAt: new Date().toISOString(),
-      rawPayload: payload
-    };
+  normalizeEvent(_payload: Record<string, unknown>): NormalizedPaymentEvent {
+    throw new Error("Normalização indisponível: o contrato de eventos do provedor ainda não foi homologado.");
   }
 }

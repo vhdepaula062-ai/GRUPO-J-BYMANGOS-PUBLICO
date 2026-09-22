@@ -1,6 +1,10 @@
 "use server";
 
-import { createAdminServerClient } from "@/lib/supabase/admin";
+import { CpfSecurity } from "@grupo-j/security";
+import { maskCompanyDocument } from "@grupo-j/domain";
+
+import { createAuthorizedAdminClient } from "@/lib/supabase/authorized";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { createHmac } from "crypto";
 
@@ -17,7 +21,7 @@ export async function moderateWorkshopAction(
   workshopId: string,
   newStatus: "active" | "inactive" | "suspended" | "pending_approval"
 ): Promise<ModerateWorkshopResult> {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   try {
     const { error } = await supabase
@@ -78,16 +82,14 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
   message: string;
   workshop?: Record<string, unknown>;
 }> {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   const cleanCnpj = data.cnpj.replace(/\D/g, "");
-  const maskedCnpj =
-    cleanCnpj.length === 14
-      ? cleanCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
-      : data.cnpj.trim();
+  const maskedCnpj = maskCompanyDocument(cleanCnpj);
 
   if (cleanCnpj.length !== 14) throw new Error("CNPJ inválido.");
   const pepper = process.env.CPF_BLIND_INDEX_PEPPER;
+  CpfSecurity.assertProtectionKeys(process.env.CPF_ENCRYPTION_KEY,pepper);
   if (!pepper) throw new Error("Chave de proteção de documentos não configurada.");
   const blindIndex = createHmac("sha256", pepper).update(`cnpj:${cleanCnpj}`).digest("hex");
 
@@ -98,6 +100,7 @@ export async function createDirectWorkshopAction(data: DirectWorkshopData): Prom
         legal_name: data.legalName?.trim() || data.tradeName.trim(),
         trade_name: data.tradeName.trim(),
         cnpj_masked: maskedCnpj,
+        cnpj_encrypted: CpfSecurity.encrypt(cleanCnpj, process.env.CPF_ENCRYPTION_KEY ?? ""),
         cnpj_blind_index: blindIndex,
         status: "active", // Direto pelo admin nasce ativa
         email: data.email.trim().toLowerCase(),
@@ -152,7 +155,7 @@ export interface DecommissionWorkshopOptions {
 }
 
 export async function getAssignedMotoristasCount(workshopId: string): Promise<number> {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
   const { count } = await supabase
     .from("customers")
     .select("id", { count: "exact", head: true })
@@ -168,67 +171,14 @@ export async function decommissionWorkshopAction(
   options: DecommissionWorkshopOptions
 ): Promise<{ success: boolean; message: string }> {
   const { workshopId, fallbackWorkshopId, deletePermanently } = options;
-  const supabase = createAdminServerClient();
-
+  if (deletePermanently) return { success: false, message: "Exclusão física bloqueada para preservar contratos e histórico. Utilize o descredenciamento." };
+  await createAuthorizedAdminClient();
+  const supabase = await createServerSupabaseClient();
   try {
-    // 1. Realoca os motoristas caso haja oficina substituta
-    if (fallbackWorkshopId && fallbackWorkshopId !== workshopId) {
-      const { data: customers } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("assigned_workshop_id", workshopId);
-
-      const customerIds = (customers ?? []).map((c: { id: string }) => c.id);
-
-      if (customerIds.length > 0) {
-        await supabase
-          .from("customers")
-          .update({
-            assigned_workshop_id: fallbackWorkshopId,
-            workshop_assigned_at: new Date().toISOString()
-          })
-          .in("id", customerIds);
-
-        const historyRows = customerIds.map((cid: string) => ({
-          customer_id: cid,
-          previous_workshop_id: workshopId,
-          new_workshop_id: fallbackWorkshopId,
-          assigned_at: new Date().toISOString(),
-          reason: "Realocação automática pelo Administrador devido ao descredenciamento da oficina de origem."
-        }));
-
-        await supabase.from("workshop_assignment_history").insert(historyRows);
-      }
-    } else {
-      await supabase
-        .from("customers")
-        .update({ assigned_workshop_id: null })
-        .eq("assigned_workshop_id", workshopId);
-    }
-
-    // 2. Se for exclusão física ou desativação
-    if (deletePermanently) {
-      await supabase.from("organization_units").delete().eq("organization_id", workshopId);
-      await supabase.from("organization_members").delete().eq("organization_id", workshopId);
-      await supabase.from("workshop_profiles").delete().eq("organization_id", workshopId);
-      await supabase.from("workshop_documents").delete().eq("organization_id", workshopId);
-      await supabase.from("workshop_services").delete().eq("organization_id", workshopId);
-      await supabase.from("promotions").delete().eq("organization_id", workshopId);
-
-      const { error: delErr } = await supabase.from("organizations").delete().eq("id", workshopId);
-      if (delErr) {
-        // Se houver ordens de serviço históricas, desativa para preservar integridade contábil
-        await supabase
-          .from("organizations")
-          .update({ status: "inactive", updated_at: new Date().toISOString() })
-          .eq("id", workshopId);
-      }
-    } else {
-      await supabase
-        .from("organizations")
-        .update({ status: "inactive", updated_at: new Date().toISOString() })
-        .eq("id", workshopId);
-    }
+    const { error } = await supabase.rpc("decommission_workshop", {
+      p_org: workshopId, p_fallback: fallbackWorkshopId || null
+    });
+    if (error) return { success: false, message: "Não foi possível descredenciar. Confira se a oficina substituta está ativa e tente novamente. Nenhuma realocação parcial foi salva." };
 
     revalidatePath("/oficinas");
     revalidatePath("/dashboard");

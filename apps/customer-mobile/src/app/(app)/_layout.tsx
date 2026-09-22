@@ -73,6 +73,7 @@ export default function AppLayout() {
           tabBarIcon: tabIcon("person-circle", "person-circle-outline")
         }}
       />
+      <Tabs.Screen name="atendimento" options={{href:null}}/>
       {/* Rotas ocultas da barra de abas mas navegáveis */}
       <Tabs.Screen
         name="historico"

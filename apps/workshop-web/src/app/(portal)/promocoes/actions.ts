@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminServerClient } from "@/lib/supabase/admin";
+import { createAuthorizedWorkshopClient } from "@/lib/supabase/authorized";
 import { getMyWorkshop } from "@/lib/queries";
 import { revalidatePath } from "next/cache";
 import { isSafeImageUrl, sanitizePlainText } from "@grupo-j/validation";
@@ -42,7 +42,7 @@ export async function createWorkshopPromotionAction(data: {
       validatedImageUrl = data.imageUrl.trim();
     }
 
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedWorkshopClient(workshopId, true);
 
     const defaultEnd = new Date();
     defaultEnd.setDate(defaultEnd.getDate() + 30);
@@ -89,7 +89,7 @@ export async function deleteWorkshopPromotion(promotionId: string) {
     const workshopId = await resolveWorkshopId();
     if (!workshopId) return { success: false, error: "Oficina não identificada." };
 
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedWorkshopClient(workshopId, true);
 
     // Garante que só remove promoções da sua própria oficina
     const { error } = await supabase
@@ -120,11 +120,11 @@ export async function suspendWorkshopPromotion(promotionId: string) {
     const workshopId = await resolveWorkshopId();
     if (!workshopId) return { success: false, error: "Oficina não identificada." };
 
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedWorkshopClient(workshopId, true);
 
     const { error } = await supabase
       .from("promotions")
-      .update({ status: "suspended", updated_at: new Date().toISOString() })
+      .update({ status: "paused", updated_at: new Date().toISOString() })
       .eq("id", promotionId)
       .eq("workshop_id", workshopId);
 
@@ -150,7 +150,7 @@ export async function reactivateWorkshopPromotion(promotionId: string) {
     const workshopId = await resolveWorkshopId();
     if (!workshopId) return { success: false, error: "Oficina não identificada." };
 
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedWorkshopClient(workshopId, true);
 
     const { error } = await supabase
       .from("promotions")

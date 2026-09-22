@@ -16,6 +16,8 @@ out/
 artifacts/
 *.p8
 *.p12
+*.pfx
+*.dpapi
 *.key
 *.mobileprovision
 *.orig.*
@@ -45,3 +47,8 @@ pnpm-debug.log*
 Thumbs.db
 *.tsbuildinfo
 supabase/.temp/
+
+# Private environment exports and audit tools
+.env.*
+!.env.example
+artifacts/db-audit/

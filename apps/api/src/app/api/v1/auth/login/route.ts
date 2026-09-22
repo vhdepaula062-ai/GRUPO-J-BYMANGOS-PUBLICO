@@ -7,7 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limiter";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const rateLimitResponse = checkRateLimit(request, {
+  const rateLimitResponse = await checkRateLimit(request, {
     maxRequests: 10,
     windowMs: 60000,
     keyPrefix: "login"
@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await getPublicDatabase().auth.signInWithPassword({ email, password });
+    if (error?.code === "email_not_confirmed") {
+      return createProblemResponse({type:"https://api.grupoj.com.br/v1/errors/email-not-confirmed",title:"Confirme seu e-mail",status:403,detail:"Abra o link enviado ao seu e-mail e depois entre com sua senha. Se necessário, solicite um novo link de confirmação."});
+    }
     if (error || !data.session || !data.user) {
       return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/invalid-credentials", title: "E-mail, CPF ou senha inválidos", status: 401, detail: "Confira seus dados e tente novamente." });
     }

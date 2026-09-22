@@ -2,6 +2,7 @@
   "name": "api",
   "version": "0.1.0",
   "private": true,
+  "engines": { "node": "24.x" },
   "scripts": {
     "dev": "next dev -p 3002",
     "build": "next build",
@@ -19,7 +20,7 @@
     "@grupo-j/security": "workspace:*",
     "@grupo-j/types": "workspace:*",
     "@grupo-j/validation": "workspace:*",
-    "next": "^14.2.24",
+    "next": "15.5.25",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "^3.24.2"
@@ -31,8 +32,8 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.24",
+    "eslint-config-next": "15.5.25",
     "typescript": "^5.7.3",
-    "vitest": "^3.0.7"
+    "vitest": "4.1.11"
   }
 }

@@ -20,8 +20,8 @@ export const metadata: Metadata = {
     title: "Grupo J Admin"
   },
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png"
+    icon: "/icons/icon-192.png?v=20260922",
+    apple: "/icons/icon-192.png?v=20260922"
   }
 };
 

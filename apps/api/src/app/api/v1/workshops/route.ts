@@ -9,9 +9,9 @@ export async function GET(request: NextRequest) {
   const city = new URL(request.url).searchParams.get("city");
   let query = getAdminDatabase()
     .from("organizations")
-    .select("id, trade_name, email, phone, status, workshop_profiles(description, rating_average, rating_count, operating_hours, is_open_now), organization_units(id, name, address_street, address_number, address_neighborhood, address_city, address_state, address_zip_code, latitude, longitude)")
+    .select("id, trade_name, status, workshop_profiles(description, rating_average, rating_count, operating_hours, is_open_now), organization_units(id, name, address_street, address_number, address_neighborhood, address_city, address_state, address_zip_code, latitude, longitude)")
     .eq("status", "active")
-    .order("trade_name");
+    .order("trade_name").limit(200);
 
   if (city) query = query.eq("organization_units.address_city", city);
   const { data, error } = await query;

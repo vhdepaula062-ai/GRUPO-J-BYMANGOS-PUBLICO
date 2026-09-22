@@ -28,6 +28,7 @@ const nextConfig = {
     "@grupo-j/design-tokens",
     "@grupo-j/ui-web",
     "@grupo-j/domain",
+    "@grupo-j/security",
     "@grupo-j/validation",
     "@grupo-j/config",
     "@grupo-j/database"

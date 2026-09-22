@@ -5,10 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileButton, MobileInput } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
 import { api } from "../../lib/api";
+import { useAuth } from "../../providers/AuthProvider";
 import { ApiClientError } from "@grupo-j/api-client";
+import { BrandLogo } from "../../components/BrandLogo";
 
 export default function CadastroScreen() {
   const router = useRouter();
+  const {signIn}=useAuth();
   const [fullName, setFullName] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
@@ -22,8 +25,13 @@ export default function CadastroScreen() {
     setError("");
     setIsLoading(true);
     try {
-      await api.register({ fullName, cpf, email, phone, password, termsAccepted, privacyAccepted: termsAccepted });
-      router.push({ pathname: "/(auth)/verificacao", params: { email } });
+      const response = await api.register<{emailConfirmationRequired:boolean;confirmationEmailSent?:boolean}>({ fullName, cpf, email, phone, password, termsAccepted, privacyAccepted: termsAccepted });
+      if(response.data.emailConfirmationRequired) {
+        router.replace({ pathname: "/(auth)/verificacao", params: { email:email.trim().toLowerCase(), delivery:response.data.confirmationEmailSent === false ? "pending" : "requested" } });
+      } else {
+        await signIn(email.trim(),password);
+        router.replace("/(app)/inicio");
+      }
     } catch (cause) {
       setError(cause instanceof ApiClientError ? cause.message : "Não foi possível concluir o cadastro.");
     } finally {
@@ -35,9 +43,10 @@ export default function CadastroScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
+          <BrandLogo />
           <Text style={styles.title}>Crie sua conta</Text>
           <Text style={styles.subtitle}>
-            Preencha seus dados para contratar o Plano Motorista Grupo J.
+            Preencha seus dados para acessar o Grupo J. A criação da conta não gera cobrança.
           </Text>
         </View>
 
@@ -47,11 +56,12 @@ export default function CadastroScreen() {
             <Text style={styles.planDescription}>Acesso ao aplicativo e benefícios preventivos</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>R$ 50,00</Text>
+            <Text style={styles.price}>Consulte os planos</Text>
             <Text style={styles.pricePeriod}>/mês</Text>
           </View>
         </View>
 
+        <TouchableOpacity onPress={()=>router.push("/legal")}><Text style={{color:tokens.colors.brand.primary}}>Consultar privacidade e termos</Text></TouchableOpacity>
         <View style={styles.form}>
           <MobileInput
             label="Nome Completo"
@@ -99,7 +109,7 @@ export default function CadastroScreen() {
 
           <View style={{ height: 12 }} />
           <MobileButton
-            label="Criar conta • Plano de R$ 50,00/mês"
+            label="Criar conta"
             variant="primary"
             size="lg"
             isLoading={isLoading}

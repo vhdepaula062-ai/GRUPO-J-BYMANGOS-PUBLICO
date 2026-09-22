@@ -28,34 +28,9 @@ CREATE INDEX IF NOT EXISTS idx_appointments_workshop_date ON appointments(worksh
 -- Habilitar RLS para agendamentos
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Oficinas podem gerenciar seus agendamentos" ON appointments
-    FOR ALL
-    TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM organization_members om
-            WHERE om.organization_id = appointments.workshop_id
-            AND om.user_id = auth.uid()
-        )
-        OR
-        EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.code IN ('admin', 'superadmin')
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM organization_members om
-            WHERE om.organization_id = appointments.workshop_id
-            AND om.user_id = auth.uid()
-        )
-        OR
-        EXISTS (
-            SELECT 1 FROM user_roles ur
-            JOIN roles r ON ur.role_id = r.id
-            WHERE ur.user_id = auth.uid()
-            AND r.code IN ('admin', 'superadmin')
-        )
-    );
+CREATE POLICY "Oficinas podem gerenciar seus agendamentos" ON public.appointments
+FOR ALL TO authenticated
+USING (public.is_platform_admin() OR EXISTS(SELECT 1 FROM public.organization_members m JOIN public.organizations o ON o.id=m.organization_id
+ WHERE m.user_id=auth.uid() AND m.organization_id=appointments.workshop_id AND m.is_active AND o.status='active' AND m.role IN ('owner','manager','attendant')))
+WITH CHECK (public.is_platform_admin() OR EXISTS(SELECT 1 FROM public.organization_members m JOIN public.organizations o ON o.id=m.organization_id
+ WHERE m.user_id=auth.uid() AND m.organization_id=appointments.workshop_id AND m.is_active AND o.status='active' AND m.role IN ('owner','manager','attendant')));

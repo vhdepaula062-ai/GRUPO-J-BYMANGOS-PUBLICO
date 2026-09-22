@@ -1,9 +1,17 @@
-import { randomUUID } from "crypto";
 import { NextRequest } from "next/server";
 import { authenticateRequest, isAuthFailure } from "@/lib/auth";
 import { createProblemResponse, createSuccessResponse } from "@/lib/response";
+import { profileUpdateSchema } from "@grupo-j/validation";
 
 export const dynamic = "force-dynamic";
+
+export async function PATCH(request:NextRequest){
+ const auth=await authenticateRequest(request);if(isAuthFailure(auth))return auth;
+ const parsed=profileUpdateSchema.safeParse(await request.json().catch(()=>null));
+ if(!parsed.success)return createProblemResponse({type:"about:blank",title:"Dados inválidos",status:422,detail:"Informe nome completo e telefone válido."});
+ const {data,error}=await auth.db.from("profiles").update({full_name:parsed.data.fullName,phone:parsed.data.phone}).eq("id",auth.user.id).select("id,full_name,phone").single();
+ return error?createProblemResponse({type:"about:blank",title:"Cadastro não atualizado",status:503}):createSuccessResponse(data);
+}
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -22,8 +30,7 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (isAuthFailure(auth)) return auth;
-  const protocol = `LGPD-${new Date().getUTCFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`;
-  const { data, error } = await auth.db.from("account_erasure_requests").insert({ user_id: auth.user.id, protocol, deadline_at: new Date(Date.now() + 15 * 86400000).toISOString() }).select("protocol, status, deadline_at").single();
-  if (error) return createProblemResponse({ type: "https://api.grupoj.com.br/v1/errors/erasure-request-failed", title: "Solicitação não registrada", status: 500, detail: error.message });
-  return createSuccessResponse(data, 202);
+  const {data,error}=await auth.db.rpc("request_own_erasure");
+  if(error)return createProblemResponse({type:"about:blank",title:"Solicitação não registrada",status:503});
+  return createSuccessResponse(data,202);
 }

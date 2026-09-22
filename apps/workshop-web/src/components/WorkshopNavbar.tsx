@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { NotificationCenter } from "./NotificationCenter";
+import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Button, MapPin, Zap, LogOut, Menu, GrupoJLogo } from "@grupo-j/ui-web";
 
@@ -12,9 +14,9 @@ export const WorkshopNavbar: React.FC<{
   locationName = "Rede Credenciada Grupo J"
 }) => {
   return (
-    <header className="sticky top-0 z-20 bg-white border-b border-slate-200/80 px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-20 bg-white border-b border-slate-200/80 px-4 sm:px-6 min-h-16 py-2 flex flex-wrap items-center justify-between gap-3">
       {/* Esquerda: Botão Hamburguer no Mobile e Unidade no Desktop */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           onClick={onOpenMobileMenu}
@@ -34,7 +36,8 @@ export const WorkshopNavbar: React.FC<{
       </div>
 
       {/* Ações Rápidas: Validar Voucher & Sair */}
-      <div className="flex items-center gap-3">
+      <div className="flex w-full sm:w-auto shrink-0 items-center justify-end gap-3">
+        <NotificationCenter compact />
         <Link href="/check-in">
           <Button
             variant="primary"
@@ -45,16 +48,17 @@ export const WorkshopNavbar: React.FC<{
             ⚡ Validar Voucher
           </Button>
         </Link>
-        <Link href="/login">
+        <form onSubmit={async event => { event.preventDefault(); const { error } = await createClient().auth.signOut(); if (error) { window.alert("Não foi possível encerrar a sessão. Tente novamente."); return; } window.location.replace("/login"); }}>
           <Button
             variant="outline"
             size="sm"
             className="h-9 text-slate-600"
-            leftIcon={<LogOut size={14} />}
+            type="submit"
+              leftIcon={<LogOut size={14} />}
           >
             Sair
           </Button>
-        </Link>
+        </form>
       </div>
     </header>
   );

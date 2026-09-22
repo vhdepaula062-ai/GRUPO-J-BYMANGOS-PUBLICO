@@ -1,107 +1,18 @@
-import React from "react";
-import { Badge, Button, Wrench, Zap } from "@grupo-j/ui-web";
-import { getMyWorkshop, getWorkshopServices } from "@/lib/queries";
 import Link from "next/link";
-
-export const dynamic = "force-dynamic";
-
-export default async function HistoricoServicosPage() {
-  const workshopData = await getMyWorkshop();
-  const workshopId = (workshopData?.organization as { id?: string } | undefined)?.id;
-
-  const services = workshopId ? await getWorkshopServices(workshopId) : [];
-
-  return (
-    <div className="space-y-6 text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Histórico de Atendimentos & Repasses</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Registro de todos os serviços preventivos executados na sua oficina com comprovante e liquidação financeira.
-          </p>
-        </div>
-        <Link href="/check-in">
-          <Button variant="primary" size="md" className="bg-[#034EFE] font-bold">
-            <Zap className="w-4 h-4 mr-1 inline" /> Novo Atendimento
-          </Button>
-        </Link>
-      </div>
-
-      {services.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-4 shadow-sm">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 flex items-center justify-center text-[#034EFE]">
-            <Wrench className="w-7 h-7" />
-          </div>
-          <div className="max-w-md mx-auto">
-            <h3 className="text-base font-bold text-slate-900">Nenhum atendimento realizado ainda</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Assim que um motorista associado validar um voucher preventivo na sua oficina, o registro completo aparecerá aqui com os dados do veículo e o comprovante de repasse.
-            </p>
-          </div>
-          <div className="pt-2">
-            <Link href="/check-in">
-              <Button variant="primary" size="sm" className="bg-[#034EFE]">
-                Realizar Primeiro Atendimento
-              </Button>
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="px-6 py-3">Voucher / Data</th>
-                  <th className="px-6 py-3">Veículo / Placa</th>
-                  <th className="px-6 py-3">Motorista</th>
-                  <th className="px-6 py-3">Serviço Executado</th>
-                  <th className="px-6 py-3">Repasse</th>
-                  <th className="px-6 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {services.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-mono font-bold text-xs text-[#034EFE] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
-                        {item.voucher_token || item.id.slice(0, 8)}
-                      </span>
-                      <span className="block text-xs text-slate-500 mt-1">
-                        {new Date(item.created_at).toLocaleDateString("pt-BR")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {item.vehicle ? (
-                        <>
-                          <span className="font-mono font-bold text-slate-900">{item.vehicle.plate}</span>
-                          <span className="text-xs text-slate-500 block">
-                            {item.vehicle.brand} {item.vehicle.model}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-900">
-                      {item.customer?.profile?.full_name ?? "Motorista Assinante"}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-800">
-                      {item.benefit?.name ?? "Serviço Preventivo"}
-                    </td>
-                    <td className="px-6 py-4 font-bold text-emerald-700">
-                      R$ 50,00
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant="success">Concluído</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+import { ActionForm } from "@grupo-j/ui-web";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getMyWorkshop } from "@/lib/queries";
+import { advanceService } from "./actions";
+export const dynamic="force-dynamic";
+const labels:Record<string,string>={open:"Aberto",in_progress:"Em andamento",completed:"Concluído",canceled:"Cancelado"};
+export default async function ServicesPage(){
+ const workshop=await getMyWorkshop();if(!workshop)throw new Error("Oficina não identificada.");
+ const db=await createServerSupabaseClient();
+ const {data:orders,error}=await db.from("service_orders").select("id,protocol,status,notes,odometer_km,created_at,completed_at,vehicle:vehicles(plate,brand,model),redemption:benefit_redemptions(benefit:benefit_definitions(name))").eq("workshop_id",workshop.organization.id).order("created_at",{ascending:false}).limit(100);
+ if(error)throw new Error("Não foi possível carregar os atendimentos.");
+ const canWrite=['owner','manager','attendant'].includes(workshop.role)&&workshop.organization.status==='active';
+ return <div className="mx-auto max-w-5xl space-y-6"><h1 className="text-2xl font-bold">Atendimentos e histórico</h1><p>A validação de voucher abre automaticamente a ordem de serviço. Registre o início e a conclusão para atualizar o histórico do motorista.</p><Link className="text-blue-700 underline" href="/check-in">Validar novo voucher</Link>
+ {!orders?.length&&<p>Nenhum atendimento registrado.</p>}{orders?.map((o:any)=><section key={o.id} className="rounded-xl border bg-white p-5 space-y-3"><p className="text-xs font-mono break-all">{o.protocol}</p><h2 className="font-bold">{o.vehicle?.plate} — {o.vehicle?.brand} {o.vehicle?.model}</h2><p>{o.redemption?.benefit?.name??'Atendimento avulso'} • {labels[o.status]}</p><p className="text-sm">{new Date(o.created_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}</p><p className="whitespace-pre-wrap">{o.notes}</p>{o.completed_at&&<p>Concluído em {new Date(o.completed_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}</p>}
+ {canWrite&&['open','in_progress'].includes(o.status)&&<ActionForm action={advanceService} submitLabel="Atualizar atendimento"><input type="hidden" name="id" value={o.id}/><label>Situação<select name="status">{o.status==='open'?<option value="in_progress">Iniciar atendimento</option>:<option value="completed">Concluir atendimento</option>}<option value="canceled">Cancelar atendimento</option></select></label><label>Quilometragem<input name="odometer" type="number" min={o.odometer_km??0} max={10000000} defaultValue={o.odometer_km??''}/></label><label>Descrição do serviço e observações<textarea name="notes" maxLength={4000} rows={3} defaultValue={o.notes??''}/></label></ActionForm>}</section>)}
+ </div>;
 }

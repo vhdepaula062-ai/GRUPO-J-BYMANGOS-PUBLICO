@@ -70,7 +70,7 @@ export default async function ClientesOficinaPage() {
                       <span className="text-xs text-slate-500 block">{c.vehicle_model}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant="success">Assinatura Ativa</Badge>
+                      <Badge variant="success">Vinculado à oficina</Badge>
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {formatDate(c.created_at)}

@@ -24,13 +24,13 @@ import {
 
 const workshopNav = [
   { name: "Painel da Oficina", href: "/painel", icon: <TrendingUp size={18} /> },
-  { name: "Check-in Rápido", href: "/check-in", icon: <Zap size={18} className="text-amber-400" />, badge: "120s" },
+  { name: "Check-in Rápido", href: "/check-in", icon: <Zap size={18} className="text-amber-400" />, badge: "10min" },
   { name: "Clientes Vinculados", href: "/clientes", icon: <Users size={18} /> },
   { name: "Agenda de Serviços", href: "/agenda", icon: <Calendar size={18} /> },
   { name: "Serviços Realizados", href: "/servicos", icon: <Wrench size={18} /> },
   { name: "Minhas Promoções", href: "/promocoes", icon: <Tag size={18} /> },
   { name: "Equipe & Mecânicos", href: "/equipe", icon: <Users size={18} /> },
-  { name: "Mensalidade (R$ 500)", href: "/mensalidade", icon: <Receipt size={18} />, badge: "Em dia" },
+  { name: "Assinatura e pagamentos", href: "/mensalidade", icon: <Receipt size={18} /> },
   { name: "Relatórios", href: "/relatorios", icon: <FileText size={18} /> },
   { name: "Configurações", href: "/configuracoes", icon: <Settings size={18} /> },
   { name: "Suporte Grupo J", href: "/suporte", icon: <HelpCircle size={18} /> }
@@ -61,7 +61,7 @@ export function WorkshopShell({
         <div className="px-4 py-2 bg-[#041129] border-b border-[#13254A] flex items-center justify-between text-[11px]">
           <span className="flex items-center gap-1.5 text-slate-400 font-medium">
             <Shield size={12} className="text-emerald-400" />
-            Oficina Homologada
+            Portal de Oficinas
           </span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
         </div>

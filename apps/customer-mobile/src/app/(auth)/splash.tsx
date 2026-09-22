@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { tokens } from "@grupo-j/design-tokens";
+import { BrandLogo } from "../../components/BrandLogo";
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -15,10 +16,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.logoBadge}>
-        <Text style={styles.logoText}>J</Text>
-      </View>
-      <Text style={styles.title}>GRUPO J</Text>
+      <BrandLogo />
       <Text style={styles.subtitle}>Prevenção e Manutenção Automotiva</Text>
     </View>
   );

@@ -6,6 +6,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/sw.js" || pathname === "/offline.html" || pathname === "/manifest.json") {
+    return NextResponse.next();
+  }
   let supabaseResponse = NextResponse.next({ request });
 
   if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.startsWith("http") || supabaseUrl.includes("placeholder")) {
@@ -47,7 +50,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/promocoes") || 
       pathname.startsWith("/suporte") || 
       pathname.startsWith("/clientes") || 
-      pathname.startsWith("/check-in");
+      pathname.startsWith("/check-in") || pathname.startsWith("/notificacoes");
 
     if (isPortalRoute && !user) {
       const loginUrl = new URL("/login", request.url);
@@ -55,16 +58,17 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    if (pathname === "/login" && user) {
+    if (pathname === "/login" && user && !request.nextUrl.searchParams.has("error")) {
       return NextResponse.redirect(new URL("/painel", request.url));
     }
 
     // Verificação de Nível de Garantia de Autenticação (MFA / AAL2)
     if (user && isPortalRoute) {
       try {
-        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalError || !aalData) throw new Error("MFA_UNAVAILABLE");
         if (aalData) {
-          if (aalData.nextLevel === "aal2" && aalData.currentLevel === "aal1") {
+          if (aalData.currentLevel !== "aal2") {
             if (pathname !== "/mfa") {
               return NextResponse.redirect(new URL("/mfa", request.url));
             }
@@ -73,7 +77,7 @@ export async function middleware(request: NextRequest) {
           }
         }
       } catch (mfaErr) {
-        // Fallback gracioso
+        return NextResponse.redirect(new URL("/login?error=mfa_unavailable", request.url));
       }
     }
 

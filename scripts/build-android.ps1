@@ -6,6 +6,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'load-android-signing.ps1')
+if (!$env:GJ_STAGING_KEYSTORE_PATH -or ![IO.Path]::IsPathRooted($env:GJ_STAGING_KEYSTORE_PATH) -or !(Test-Path -LiteralPath $env:GJ_STAGING_KEYSTORE_PATH -PathType Leaf)) { throw 'Configure GJ_STAGING_KEYSTORE_PATH com o caminho absoluto da chave protegida.' }
+if (!$env:GJ_STAGING_KEYSTORE_PASSWORD -or $env:GJ_STAGING_KEYSTORE_PASSWORD.Length -lt 24) { throw 'Configure GJ_STAGING_KEYSTORE_PASSWORD com uma senha protegida de pelo menos 24 caracteres.' }
+if ([IO.Path]::GetFullPath($env:GJ_STAGING_KEYSTORE_PATH).StartsWith($repoRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Guarde a chave de assinatura fora do repositorio.' }
 if (!$JavaHome) {
   $JavaHome = Split-Path -Parent (Split-Path -Parent (Get-Command java.exe -ErrorAction Stop).Source)
 }
@@ -24,7 +28,7 @@ New-Item -ItemType Directory -Path $BuildRoot | Out-Null
 
 # Uma copia fisica evita que CMake/Node resolvam junctions de volta ao caminho com acentos.
 # Nao copiar arquivos de ambiente do backend para o contexto do aplicativo.
-& robocopy $repoRoot $BuildRoot /E /XD node_modules .git .next .turbo build dist out .gradle .cxx .idea .expo .vercel .ecosystem-data artifacts /XF .env .env.* *.log *.tsbuildinfo local.properties /NFL /NDL /NJH /NJS /NP
+& robocopy $repoRoot $BuildRoot /E /XD node_modules .git .next .turbo build dist out .gradle .cxx .idea .expo .vercel .ecosystem-data artifacts /XF *.keystore *.jks *.p12 *.pfx .env .env.* *.log *.tsbuildinfo local.properties /NFL /NDL /NJH /NJS /NP
 if ($LASTEXITCODE -ge 8) { throw "Falha ao preparar copia do projeto: robocopy $LASTEXITCODE" }
 
 $androidRoot = Join-Path $BuildRoot 'apps\customer-mobile\android'
@@ -49,7 +53,7 @@ try {
   $env:NODE_ENV = 'production'
   Push-Location $androidRoot
   try {
-    & cmd.exe /d /c '.\gradlew.bat assembleRelease --console=plain --max-workers=2 2>&1' | Tee-Object -FilePath (Join-Path $outputRoot 'build.log')
+    & cmd.exe /d /c '.\gradlew.bat :app:assembleRelease --console=plain --max-workers=2 2>&1' | Tee-Object -FilePath (Join-Path $outputRoot 'build.log')
     if ($LASTEXITCODE -ne 0) { throw 'Build Android falhou. Consulte artifacts/android/build.log.' }
   } finally { Pop-Location }
 

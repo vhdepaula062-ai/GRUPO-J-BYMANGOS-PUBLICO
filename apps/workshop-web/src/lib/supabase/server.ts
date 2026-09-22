@@ -4,9 +4,9 @@ import { cookies } from "next/headers";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export function createServerSupabaseClient() {
+export async function createServerSupabaseClient() {
   if (!supabaseUrl || !supabaseAnonKey) throw new Error("Supabase não configurado");
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -27,13 +27,13 @@ export function createServerSupabaseClient() {
 }
 
 export async function getAuthenticatedUser() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error
   } = await supabase.auth.getUser();
 
-  if (error || !user) return null;
+  if (error || !user || user.app_metadata?.account_status === "suspended") return null;
   return user;
 }
 

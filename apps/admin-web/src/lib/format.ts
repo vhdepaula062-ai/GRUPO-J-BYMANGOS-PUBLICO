@@ -36,6 +36,13 @@ export interface StatusBadge {
 
 /** Mapeia status do banco para label e variant do Badge */
 export const STATUS_MAP: Record<string, StatusBadge> = {
+  none: { label: "Sem assinatura", variant: "neutral" },
+  expired: { label: "Período encerrado", variant: "warning" },
+  trial:            { label: "Teste sem cobrança",       variant: "info" },
+  authorized:       { label: "Autorizado, não recebido", variant: "warning" },
+  refunded:         { label: "Estornado",                variant: "neutral" },
+  charged_back:     { label: "Contestado",               variant: "danger" },
+  failed:           { label: "Falhou",                   variant: "danger" },
   active:           { label: "Ativo",                    variant: "success" },
   inactive:         { label: "Inativo",                  variant: "neutral" },
   suspended:        { label: "Suspenso",                 variant: "warning" },

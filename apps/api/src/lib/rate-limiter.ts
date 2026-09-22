@@ -1,3 +1,5 @@
+import {createHmac} from "node:crypto";
+import {getAdminDatabase} from "./auth";
 import { NextRequest, NextResponse } from "next/server";
 import { createProblemResponse } from "./response";
 
@@ -50,10 +52,21 @@ export function getClientIp(request: NextRequest): string {
  * Validador de Rate Limit em conformidade com RFC 7807 (Problem Details).
  * Retorna null se a requisição estiver dentro do limite, ou um NextResponse (429) se excedido.
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   request: NextRequest,
   config: RateLimitConfig
-): NextResponse | null {
+): Promise<NextResponse | null> {
+  if(process.env.NODE_ENV!=="test"){
+    try{
+      const pepper=process.env.CPF_BLIND_INDEX_PEPPER;if(!pepper)throw new Error("Missing rate key");
+      const key=createHmac("sha256",pepper).update("rate:"+(config.keyPrefix??"global")+":"+getClientIp(request)).digest("hex");
+      const {data,error}=await getAdminDatabase().rpc("consume_request_limit",{p_key:key,p_max:config.maxRequests,p_window_seconds:Math.ceil(config.windowMs/1000)});
+      if(error||typeof data?.allowed!=="boolean")throw new Error("Rate storage unavailable");
+      if(data.allowed)return null;
+      const response=createProblemResponse({type:"about:blank",title:"Muitas requisições",status:429,detail:"Aguarde antes de tentar novamente."});response.headers.set("Retry-After",String(data.retryAfter));return response;
+    }catch{return createProblemResponse({type:"about:blank",title:"Serviço temporariamente indisponível",status:503});}
+  }
+  // Isolated test adapter; production always uses the shared database counter.
   cleanupStaleEntries();
 
   const ip = getClientIp(request);
@@ -64,6 +77,11 @@ export function checkRateLimit(
   const record = cache.get(key);
 
   if (!record || now >= record.resetAt) {
+    if (!record && cache.size >= 10000) {
+      const response = createProblemResponse({type:"https://api.grupoj.com.br/v1/errors/rate-limit-capacity",title:"Muitas requisições",status:429,detail:"Aguarde para tentar novamente."});
+      response.headers.set("Retry-After","60");
+      return response;
+    }
     cache.set(key, { count: 1, resetAt: now + config.windowMs });
     return null;
   }

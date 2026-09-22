@@ -43,7 +43,7 @@ function generateValidCnpj(): string {
   return n.join("");
 }
 
-describe("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
+describe.skipIf(process.env.ALLOW_TEST_WRITES !== "true")("HOMOLOGAÇÃO INTEGRADA: ECOSSISTEMA GRUPO J", () => {
   let supabaseUrl: string;
   let supabaseAnonKey: string;
   let serviceRoleKey: string;

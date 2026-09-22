@@ -1,28 +1,11 @@
-import { NextRequest } from "next/server";
-import { createSuccessResponse } from "@/lib/response";
-
-export const dynamic = "force-dynamic";
-
-export async function GET(_request: NextRequest) {
-  const activeConfig = {
-    version: 1,
-    environment: process.env.NODE_ENV || "development",
-    features: {
-      enableNewCheckinFlow: true,
-      enableOilFilterBenefit: false, // Em aberto conforme DECISIONS_PENDING
-      allowWorkshopChangeDays: 30 // Regra dos 30 dias
-    },
-    pricing: {
-      driverPlanMonthlyCents: 5000,
-      workshopPlanMonthlyCents: 50000,
-      currency: "BRL"
-    },
-    supportContact: {
-      phone: "0800 000 0000",
-      whatsapp: "5511999998888",
-      email: "suporte@grupoj.com.br"
-    }
-  };
-
-  return createSuccessResponse(activeConfig, 200);
+import { readSettings,publicSettings } from "@grupo-j/database";
+import { getAdminDatabase } from "@/lib/auth";
+import { createSuccessResponse,createProblemResponse } from "@/lib/response";
+export const dynamic="force-dynamic";
+export async function GET(){
+ try{
+  const db=getAdminDatabase();const config=await readSettings(db);
+  const {data:plans,error}=await db.from("plans").select("id,name,audience,price_cents,currency,billing_interval_months").eq("is_active",true);if(error)throw error;
+  return createSuccessResponse({version:config.version,settings:publicSettings(config.value),plans,gateway:{configured:false},features:{allowWorkshopChangeDays:30,voucherLifetimeSeconds:600}});
+ }catch{return createProblemResponse({type:"about:blank",title:"Configuração indisponível",status:503});}
 }

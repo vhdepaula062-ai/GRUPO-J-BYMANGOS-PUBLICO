@@ -17,6 +17,22 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = "md", c
   let label = status;
 
   switch (normalized) {
+    case "completed":
+      variant = "success";
+      label = "Concluído";
+      break;
+    case "in_progress":
+      variant = "info";
+      label = "Em andamento";
+      break;
+    case "validated":
+      variant = "info";
+      label = "Validado";
+      break;
+    case "requested":
+      variant = "warning";
+      label = "Solicitado";
+      break;
     case "active":
     case "ativa":
     case "ativo":

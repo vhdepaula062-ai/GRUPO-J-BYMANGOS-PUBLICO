@@ -187,7 +187,7 @@ export default function SejaParceiroPage() {
                 <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100 flex items-start gap-3 text-xs text-slate-600 mt-2">
                   <span className="text-[#034EFE] font-bold text-base">ℹ</span>
                   <div className="leading-relaxed">
-                    <strong className="text-slate-900 block font-bold">Mensalidade B2B de R$ 500,00/mês</strong>
+                    <strong className="text-slate-900 block font-bold">Plano B2B conforme catálogo vigente</strong>
                     Garante clientes qualificados vinculados na sua região, SaaS de check-in instantâneo e visibilidade no app móvel.
                   </div>
                 </div>

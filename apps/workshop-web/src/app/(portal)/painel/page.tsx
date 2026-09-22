@@ -35,7 +35,7 @@ export default async function WorkshopDashboardPage() {
         getWorkshopServices(workshopId)
       ])
     : [
-        { linkedCustomers: 0, monthlyCheckIns: 0, subscriptionStatus: "active", pendingAppointments: 0 },
+        { linkedCustomers: 0, monthlyCheckIns: 0, subscriptionStatus: "unavailable", pendingAppointments: 0 },
         []
       ];
 
@@ -129,7 +129,7 @@ export default async function WorkshopDashboardPage() {
                 <Link href="/check-in" className="font-bold text-emerald-700 underline">
                   Validador de Voucher
                 </Link>{" "}
-                para registrar o atendimento e garantir o repasse.
+                para registrar o atendimento.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link href="/check-in">
@@ -160,7 +160,7 @@ export default async function WorkshopDashboardPage() {
           <KpiCard
             title="Atendimentos no Mês"
             value={String(kpis.monthlyCheckIns)}
-            subtitle={kpis.monthlyCheckIns === 0 ? "Nenhum este mês ainda" : "Vouchers validados este mês"}
+            subtitle={kpis.monthlyCheckIns === 0 ? "Nenhum este mês ainda" : "Serviços concluídos este mês"}
             icon={<Wrench size={20} />}
             badge={kpis.monthlyCheckIns > 0 ? { text: "Em dia", variant: "info" } : { text: "Aguardando", variant: "neutral" }}
           />
@@ -169,10 +169,10 @@ export default async function WorkshopDashboardPage() {
         <StaggerItem>
           <KpiCard
             title="Mensalidade B2B"
-            value="R$ 500,00"
-            subtitle="Parceria ativa com o Grupo J"
+            value={kpis.subscriptionStatus === "active" ? "Ativa" : kpis.subscriptionStatus === "trial" ? "Em teste" : "Consultar"}
+            subtitle="Situação contratual; não comprova pagamento"
             icon={<Receipt size={20} />}
-            badge={{ text: kpis.subscriptionStatus === "active" ? "Em dia" : "Verificar", variant: kpis.subscriptionStatus === "active" ? "success" : "warning" }}
+            badge={{ text: "Consultar assinatura", variant: "neutral" }}
           />
         </StaggerItem>
 
@@ -197,12 +197,12 @@ export default async function WorkshopDashboardPage() {
             </div>
             <h3 className="text-lg font-bold text-white">Motorista chegou com voucher?</h3>
             <p className="text-xs text-slate-400 max-w-xl">
-              Insira o código do voucher ou placa no check-in para liberar o benefício preventivo em menos de 10 segundos.
+              Insira o código completo do voucher no check-in para liberar o benefício preventivo após conferir os dados.
             </p>
           </div>
           <Link href="/check-in" className="shrink-0 w-full md:w-auto">
             <Button variant="primary" size="md" className="w-full md:w-auto shadow-md shadow-blue-600/30" rightIcon={<ArrowRight size={16} />}>
-              Abrir Validador 120s
+              Abrir Validador 10min
             </Button>
           </Link>
         </div>
@@ -212,7 +212,7 @@ export default async function WorkshopDashboardPage() {
       <Reveal distance={16} duration={0.35}>
         <Card variant="elevated">
           <CardHeader>
-            <CardTitle>Atendimentos Realizados Recentemente</CardTitle>
+            <CardTitle>Atendimentos Recentes</CardTitle>
             <span className="text-xs text-slate-400 font-medium">Dados reais do banco</span>
           </CardHeader>
           <CardContent className="p-0">
@@ -256,9 +256,9 @@ export default async function WorkshopDashboardPage() {
                   header: "Ações",
                   align: "right",
                   render: () => (
-                    <Button variant="outline" size="xs">
+                    <Link href="/servicos" className="text-blue-700 underline">
                       Ver O.S.
-                    </Button>
+                    </Link>
                   )
                 }
               ]}

@@ -11,20 +11,18 @@ import {
   Download,
   Users,
   Trash2,
-  AlertTriangle,
   User,
   Mail,
   Phone,
   Calendar,
   Modal,
-  Alert,
-  Input
+  Alert
 } from "@grupo-j/ui-web";
 import type { MotoristRow } from "@/lib/queries";
-import { formatDate } from "@/lib/format";
+import { formatDate, statusText } from "@/lib/format";
 import { exportToCsv } from "@/lib/exportCsv";
 import { ClienteSearchBar } from "./ClienteSearchBar";
-import { deleteMotoristaAction } from "./actions";
+import {useRouter} from "next/navigation";
 
 interface ClientesClientProps {
   initialMotoristas: MotoristRow[];
@@ -34,45 +32,14 @@ interface ClientesClientProps {
 export function ClientesClient({ initialMotoristas, search = "" }: ClientesClientProps) {
   const [motoristas, setMotoristas] = useState<MotoristRow[]>(initialMotoristas);
   const [viewingMotorista, setViewingMotorista] = useState<MotoristRow | null>(null);
-  const [deletingMotorista, setDeletingMotorista] = useState<MotoristRow | null>(null);
-  const [confirmationText, setConfirmationText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
+  const router=useRouter();
+  const setDeletingMotorista=(_person:MotoristRow)=>router.push("/privacidade");
+
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     setMotoristas(initialMotoristas);
   }, [initialMotoristas]);
-
-  const handleConfirmDelete = async () => {
-    if (!deletingMotorista) return;
-    setIsDeleting(true);
-
-    try {
-      const res = await deleteMotoristaAction(deletingMotorista.id, deletingMotorista.profile_id);
-      if (res.success) {
-        setMotoristas((prev) => prev.filter((m) => m.id !== deletingMotorista.id));
-        setFeedback({
-          type: "success",
-          message: `Motorista ${deletingMotorista.full_name} e todos os seus dados foram excluídos com sucesso.`
-        });
-        setDeletingMotorista(null);
-        setViewingMotorista(null);
-        setConfirmationText("");
-      } else {
-        setFeedback({
-          type: "error",
-          message: res.message || "Erro ao excluir motorista."
-        });
-      }
-    } catch (err) {
-      setFeedback({
-        type: "error",
-        message: err instanceof Error ? err.message : "Erro inesperado ao excluir motorista."
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   const handleExportCsv = () => {
     exportToCsv(
@@ -83,7 +50,7 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
         { key: "phone", header: "Telefone", format: (v) => v || "Não informado" },
         { key: "cpf_masked", header: "CPF", format: (v) => v || "***.***.***-**" },
         { key: "created_at", header: "Cadastrado em", format: (v) => formatDate(v) },
-        { key: "subscription_status", header: "Assinatura", format: (v) => v === "active" ? "Ativa (R$ 50/mês)" : "Pendente" }
+        { key: "subscription_status", header: "Assinatura", format: (v) => statusText(v || "none") }
       ],
       motoristas
     );
@@ -93,7 +60,7 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
     <div className="space-y-6 text-left">
       <PageHeader
         title="Motoristas Assinantes"
-        subtitle="Clientes com assinatura ativa de R$ 50/mês. CPF protegido por AES-256-GCM + Blind Index HMAC."
+        subtitle="Motoristas cadastrados e situação contratual registrada no ecossistema."
         actions={
           <div className="flex items-center gap-3">
             <Button
@@ -138,12 +105,12 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
           </div>
           <h3 className="text-lg font-bold text-slate-900">Nenhum motorista assinante ainda</h3>
           <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
-            Os motoristas se cadastram e assinam (R$ 50/mês) diretamente pelo aplicativo mobile.
+            Os motoristas se cadastram diretamente pelo aplicativo mobile. A cobrança depende da integração do gateway.
             Assim que o primeiro assinar, ele aparecerá aqui com os dados protegidos por criptografia.
           </p>
           <div className="mt-6 flex items-center justify-center gap-2 text-xs text-emerald-600 font-semibold">
             <ShieldCheck size={14} />
-            <span>Todos os CPFs são armazenados cifrados — conformidade LGPD total.</span>
+            <span>Os documentos são cifrados e apresentados com máscara.</span>
           </div>
         </div>
       ) : (
@@ -185,7 +152,7 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
                 key: "subscription_status",
                 header: "Assinatura",
                 render: (item: MotoristRow) => (
-                  <StatusBadge status={item.subscription_status === "active" ? "Ativa" : "R$ 50,00/mês"} size="sm" />
+                  <StatusBadge status={statusText(item.subscription_status ?? "none")} size="sm" />
                 )
               },
               {
@@ -208,7 +175,6 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
                       leftIcon={<Trash2 size={12} />}
                       onClick={() => {
                         setDeletingMotorista(item);
-                        setConfirmationText("");
                       }}
                     >
                       Remover
@@ -251,7 +217,6 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
                   const m = viewingMotorista;
                   setViewingMotorista(null);
                   setDeletingMotorista(m);
-                  setConfirmationText("");
                 }}
               >
                 Excluir Conta e Dados
@@ -279,7 +244,7 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
                 <p className="text-xs text-slate-500 truncate">{viewingMotorista.email}</p>
               </div>
               <StatusBadge
-                status={viewingMotorista.subscription_status === "active" ? "Ativa" : "R$ 50,00/mês"}
+                status={statusText(viewingMotorista.subscription_status ?? "none")}
                 size="sm"
               />
             </div>
@@ -361,95 +326,7 @@ export function ClientesClient({ initialMotoristas, search = "" }: ClientesClien
       )}
 
       {/* Modal: Confirmação de Exclusão Definitiva de Motorista */}
-      {deletingMotorista && (
-        <Modal
-          isOpen={Boolean(deletingMotorista)}
-          onClose={() => {
-            if (!isDeleting) {
-              setDeletingMotorista(null);
-              setConfirmationText("");
-            }
-          }}
-          title="Excluir Motorista Definitivamente"
-          description="Ação irreversível de exclusão de conta e todos os dados associados"
-          size="md"
-          footer={
-            <div className="flex items-center justify-end gap-3 w-full">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isDeleting}
-                onClick={() => {
-                  setDeletingMotorista(null);
-                  setConfirmationText("");
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                leftIcon={<Trash2 size={14} />}
-                disabled={confirmationText.trim().toUpperCase() !== "EXCLUIR" || isDeleting}
-                isLoading={isDeleting}
-                onClick={handleConfirmDelete}
-              >
-                {isDeleting ? "Apagando todos os dados..." : "Sim, Excluir Definitivamente"}
-              </Button>
-            </div>
-          }
-        >
-          <div className="space-y-4 text-slate-700 text-sm">
-            {/* Box de Alerta Destrutivo */}
-            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 text-rose-900">
-              <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} />
-              </div>
-              <div className="space-y-1 leading-relaxed">
-                <h5 className="font-bold text-rose-950 text-sm">Atenção: Esta ação não pode ser desfeita!</h5>
-                <p className="text-xs text-rose-800">
-                  Você está prestes a remover o motorista{" "}
-                  <strong className="text-rose-950">{deletingMotorista.full_name}</strong> (
-                  {deletingMotorista.email}).
-                </p>
-              </div>
-            </div>
 
-            {/* Lista dos dados que serão limpos */}
-            <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl text-xs space-y-2 text-slate-600">
-              <span className="font-bold text-slate-800 block text-xs uppercase tracking-wide">
-                Dados que serão completamente eliminados:
-              </span>
-              <ul className="list-disc list-inside space-y-1 text-slate-600">
-                <li>Conta de autenticação (login, senha e tokens revogados no app mobile)</li>
-                <li>Perfil cadastral, contatos e endereços</li>
-                <li>Assinatura ativa, faturas e registros de pagamento</li>
-                <li>Veículos vinculados e histórico de transferências</li>
-                <li>Ordens de serviço, agendamentos e resgates de benefícios</li>
-                <li>Sessões ativas e histórico operacional</li>
-              </ul>
-            </div>
-
-            {/* Campo de confirmação de segurança */}
-            <div className="space-y-2 pt-1">
-              <label className="block text-xs font-semibold text-slate-800">
-                Para autorizar a remoção permanente, digite{" "}
-                <span className="font-mono text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                  EXCLUIR
-                </span>{" "}
-                no campo abaixo:
-              </label>
-              <Input
-                placeholder='Digite "EXCLUIR"'
-                value={confirmationText}
-                onChange={(e) => setConfirmationText(e.target.value)}
-                disabled={isDeleting}
-                autoFocus
-              />
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

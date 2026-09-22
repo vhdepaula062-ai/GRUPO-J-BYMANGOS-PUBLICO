@@ -1,30 +1,16 @@
 import React from "react";
-import { getTransactions } from "@/lib/queries";
+import { getFinancialSnapshot } from "@/lib/financial-data";
 import { FinanceiroClient } from "./FinanceiroClient";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
 export default async function FinanceiroAdminPage() {
-  const transactions = await getTransactions();
-
-  // Cálculo de balanço baseado nas transações reais
-  const totalRecebidoCents = transactions
-    .filter((t) => t.status === "paid" || t.status === "completed" || t.status === "settled")
-    .reduce((acc, t) => acc + (t.amount_cents > 0 ? t.amount_cents : 0), 0);
-
-  const totalRepassesCents = transactions
-    .filter((t) => t.type === "workshop_reimbursement" || t.amount_cents < 0)
-    .reduce((acc, t) => acc + Math.abs(t.amount_cents), 0);
-
-  const saldoLiquidoCents = totalRecebidoCents - totalRepassesCents;
-
-  return (
-    <FinanceiroClient
-      transactions={transactions}
-      totalRecebidoCents={totalRecebidoCents}
-      totalRepassesCents={totalRepassesCents}
-      saldoLiquidoCents={saldoLiquidoCents}
-    />
-  );
+  try {
+    const snapshot = await getFinancialSnapshot();
+    return <>
+      <p className="text-sm text-slate-500 mb-3">Consulta concluída: {new Date(snapshot.checkedAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} (Brasília)</p>
+      <FinanceiroClient transactions={snapshot.transactions} totalRecebidoCents={snapshot.paidCents} totalPendenteCents={snapshot.pendingCents} totalEstornadoCents={snapshot.reversedCents} />
+    </>;
+  } catch {
+    return <div role="alert" className="p-6 rounded-xl bg-amber-50 text-amber-900">Financeiro indisponível. Não foi possível confirmar os valores no banco. Nenhum total será apresentado até uma consulta bem-sucedida.</div>;
+  }
 }

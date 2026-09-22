@@ -15,20 +15,24 @@ export function createSuccessResponse<T>(data: T, status = 200, meta?: Record<st
     {
       status,
       headers: {
-        "X-Content-Type-Options": "nosniff"
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store"
       }
     }
   );
 }
 
-export function createProblemResponse(problem: ProblemDetails) {
-  defaultLogger.warn("API Problem Details retornada", { problem });
+export function createProblemResponse(input: Pick<ProblemDetails,"type"|"title"|"status"> & {detail?:string; [key:string]:unknown}) {
+  const problem:ProblemDetails={...input,detail:input.detail??input.title};
+  defaultLogger.warn("API Problem Details retornada", { type: problem.type, title: problem.title, status: problem.status });
 
-  return NextResponse.json(problem, {
+  const publicProblem = problem.status >= 500 ? { ...problem, detail: "Não foi possível concluir a operação. Tente novamente ou contate o atendimento." } : problem;
+  return NextResponse.json(publicProblem, {
     status: problem.status,
     headers: {
       "Content-Type": "application/problem+json",
-      "X-Content-Type-Options": "nosniff"
+      "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store"
     }
   });
 }

@@ -6,7 +6,7 @@ import { defaultLogger } from "@grupo-j/observability";
 import { checkRateLimit } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
-  const rateLimitResponse = checkRateLimit(request, {
+  const rateLimitResponse = await checkRateLimit(request, {
     maxRequests: 5,
     windowMs: 60000,
     keyPrefix: "recover"
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let redirectTo = process.env.PASSWORD_RESET_REDIRECT_URL;
+    let redirectTo: string | undefined = process.env.PASSWORD_RESET_REDIRECT_URL ?? "https://grupo-j-oficinas.vercel.app/redefinir-senha";
     if (redirectTo && !isSafeHttpUrl(redirectTo)) {
       redirectTo = undefined;
     }

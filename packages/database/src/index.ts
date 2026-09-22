@@ -36,3 +36,4 @@ export function createRequestClient(
 }
 
 export { SupabaseClient };
+export * from "./portal";

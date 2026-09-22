@@ -31,6 +31,7 @@ const navigation = [
   { name: "Financeiro & MRR", href: "/financeiro", icon: <DollarSign size={18} /> },
   { name: "Benefícios & Regras", href: "/beneficios", icon: <ShieldCheck size={18} /> },
   { name: "Check-ins & Visitas", href: "/visitas", icon: <MapPin size={18} /> },
+  { name: "Atendimento", href: "/atendimento", icon: <FileText size={18} /> },
   { name: "Promoções", href: "/promocoes", icon: <Tag size={18} /> },
   { name: "Configurações Remotas", href: "/configuracoes", icon: <Settings size={18} /> },
   { name: "Usuários & Acessos", href: "/usuarios", icon: <Users size={18} /> },

@@ -5,10 +5,13 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Rotas que NÃO exigem autenticação
-const PUBLIC_ROUTES = ["/login", "/mfa", "/api/auth"];
+const PUBLIC_ROUTES = ["/login", "/mfa", "/api/auth", "/recuperar-senha", "/redefinir-senha", "/legal"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (pathname === "/sw.js" || pathname === "/offline.html" || pathname === "/manifest.json") {
+    return NextResponse.next();
+  }
   let supabaseResponse = NextResponse.next({ request });
 
   if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.startsWith("http") || supabaseUrl.includes("placeholder")) {
@@ -59,17 +62,18 @@ export async function middleware(request: NextRequest) {
     }
 
     // Usuário logado tentando acessar login → redirecionar para /dashboard
-    if (pathname === "/login" && user) {
+    if (pathname === "/login" && user && !request.nextUrl.searchParams.has("error")) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     // Verificação de Nível de Garantia de Autenticação (MFA / AAL2)
     if (user) {
       try {
-        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalError || !aalData) throw new Error("MFA_UNAVAILABLE");
         if (aalData) {
-          // Se o usuário possui segundo fator cadastrado mas a sessão atual é AAL1
-          if (aalData.nextLevel === "aal2" && aalData.currentLevel === "aal1") {
+          // Todo acesso administrativo exige segundo fator, inclusive na primeira inscrição.
+          if (aalData.currentLevel !== "aal2") {
             if (pathname !== "/mfa" && !pathname.startsWith("/api/auth")) {
               return NextResponse.redirect(new URL("/mfa", request.url));
             }
@@ -78,7 +82,7 @@ export async function middleware(request: NextRequest) {
           }
         }
       } catch (mfaErr) {
-        // Log seguro e fallback gracioso sem quebrar acesso
+        return NextResponse.redirect(new URL("/login?error=mfa_unavailable", request.url));
       }
     }
 

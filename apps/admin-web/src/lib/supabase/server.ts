@@ -8,9 +8,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
  * Cria um cliente Supabase para uso no lado do SERVER (Server Components, Route Handlers, Server Actions).
  * Lê e escreve cookies via next/headers para manter a sessão sincronizada.
  */
-export function createServerSupabaseClient() {
+export async function createServerSupabaseClient() {
   if (!supabaseUrl || !supabaseAnonKey) throw new Error("Supabase não configurado");
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -36,13 +36,13 @@ export function createServerSupabaseClient() {
  * Use em Server Components e Server Actions que exigem autenticação.
  */
 export async function getAuthenticatedUser() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
     error
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
+  if (error || !user || user.app_metadata?.account_status === "suspended") {
     return null;
   }
 
@@ -53,19 +53,10 @@ export async function checkIsAdmin(): Promise<boolean> {
   const user = await getAuthenticatedUser();
   if (!user) return false;
 
-  const appRole = user.app_metadata?.role;
-  const userRoleMeta = user.user_metadata?.account_type || user.user_metadata?.role;
-
-  const validRoles = ["admin", "platform_admin", "platform_owner", "super_admin"];
-  if (
-    (typeof appRole === "string" && validRoles.includes(appRole)) ||
-    (typeof userRoleMeta === "string" && validRoles.includes(userRoleMeta))
-  ) {
-    return true;
-  }
+  const validRoles = ["platform_admin", "platform_owner"];
 
   try {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const { data: userRoles } = await supabase
       .from("user_roles")
       .select("role:roles!inner(code, name)")
@@ -74,13 +65,8 @@ export async function checkIsAdmin(): Promise<boolean> {
     if (userRoles && userRoles.length > 0) {
       const isAdminRole = userRoles.some((ur: any) => {
         const code = ur.role?.code;
-        const name = ur.role?.name;
         return (
-          validRoles.includes(code) ||
-          name === "Administrador" ||
-          name === "Administrador da plataforma" ||
-          name === "Proprietário da plataforma" ||
-          name === "Super Administrador"
+          validRoles.includes(code)
         );
       });
       if (isAdminRole) return true;
@@ -94,7 +80,7 @@ export async function checkIsAdmin(): Promise<boolean> {
 
 /**
  * Exige reautenticação recente para ações sensíveis (ex: exclusão de dados, alteração de permissões).
- * Falha caso o último login do usuário tenha ocorrido há mais de maxAgeMinutes minutos.
+ * Valida a criação da sessão atual no banco, limitada a 15 minutos.
  */
 export async function assertRecentAuthentication(maxAgeMinutes = 15): Promise<{ success: boolean; error?: string }> {
   const user = await getAuthenticatedUser();
@@ -102,17 +88,16 @@ export async function assertRecentAuthentication(maxAgeMinutes = 15): Promise<{ 
     return { success: false, error: "Sessão inválida ou não autenticada." };
   }
 
-  const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
-  const now = Date.now();
-  const maxAgeMs = maxAgeMinutes * 60 * 1000;
-
-  if (now - lastSignIn > maxAgeMs) {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("has_recent_session", {
+    p_max_age_minutes: Math.min(15, maxAgeMinutes)
+  });
+  if (error || data !== true) {
     return {
       success: false,
-      error: "Reautenticação obrigatória. Por segurança, confirme sua senha ou faça novo login para realizar esta ação."
+      error: "Reautenticação obrigatória. Por segurança, saia e entre novamente para realizar esta ação."
     };
   }
 
   return { success: true };
 }
-

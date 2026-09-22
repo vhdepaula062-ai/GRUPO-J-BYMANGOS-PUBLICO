@@ -1,5 +1,10 @@
+import {ActionForm} from "@grupo-j/ui-web";
+import {createAuthorizedAdminClient} from "@/lib/supabase/authorized";
+import {createPlan,grantTrial} from "./actions";
+import {randomUUID} from "node:crypto";
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, CreditCard } from "@grupo-j/ui-web";
+import { readFinancialRows } from "@/lib/financial-data";
 import { getSubscriptions } from "@/lib/queries";
 import { formatCents, formatDate, statusLabel } from "@/lib/format";
 import Link from "next/link";
@@ -7,8 +12,9 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function AssinaturasPage() {
-  const subscriptions = await getSubscriptions();
+  const [subscriptions, plans] = await Promise.all([getSubscriptions(), readFinancialRows("plans", "id, name, description, audience, price_cents, billing_interval_months, is_active")]);
 
+  const db=await createAuthorizedAdminClient();const benefits=await db.from("benefit_definitions").select("id,name").eq("is_active",true);if(benefits.error)throw new Error("Falha ao consultar benefícios.");
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -20,53 +26,17 @@ export default async function AssinaturasPage() {
         </div>
       </div>
 
-      {/* Planos Oficiais da Plataforma */}
+      <p className="text-sm text-amber-800">Gateway ainda não homologado. Valores dos planos são preços de catálogo, não pagamentos recebidos.</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card variant="elevated">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Plano Prevenção Contínua</CardTitle>
-              <Badge variant="info">B2C — Motorista</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <span className="text-3xl font-extrabold text-slate-900">R$ 50,00</span>
-              <span className="text-sm text-slate-500"> / mês (recorrência)</span>
-            </div>
-            <p className="text-sm text-slate-600">
-              Acesso aos 4 benefícios de prevenção veicular (alinhamento, balanceamento, ar-condicionado e rodízio) + clube de benefícios e promoções exclusivas das oficinas parceiras.
-            </p>
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">Cobrança: Mensal via PagSeguro</span>
-              <Badge variant="success">Em Produção</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card variant="elevated">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Plano Credenciamento Parceiro</CardTitle>
-              <Badge variant="warning">B2B — Oficina</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <span className="text-3xl font-extrabold text-slate-900">R$ 500,00</span>
-              <span className="text-sm text-slate-500"> / mês (mensalidade SaaS)</span>
-            </div>
-            <p className="text-sm text-slate-600">
-              Taxa de adesão e permanência para oficinas mecânicas parceiras. Inclui painel SaaS de gestão de box, validação de vouchers em tempo real e divulgação de ofertas para motoristas.
-            </p>
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">Cobrança: Mensal via PagSeguro</span>
-              <Badge variant="success">Em Produção</Badge>
-            </div>
-          </CardContent>
-        </Card>
+        {plans.filter(plan => plan.is_active).map(plan => <Card key={plan.id} variant="elevated">
+          <CardHeader><CardTitle>{plan.name}</CardTitle><Badge variant="info">{plan.audience === "customer" ? "Motorista" : "Oficina"}</Badge></CardHeader>
+          <CardContent><p className="text-2xl font-bold">{formatCents(plan.price_cents)}</p><p>A cada {plan.billing_interval_months} mês(es)</p><p className="text-sm text-slate-500">{plan.description}</p></CardContent>
+        </Card>)}
       </div>
 
+      <details className="bg-white border p-6 rounded-xl"><summary className="font-bold cursor-pointer">Criar nova oferta de plano</summary><p>Alterações de preço são novas ofertas; assinaturas existentes mantêm o plano contratado.</p><ActionForm action={createPlan} submitLabel="Criar plano" reset>
+<label>Nome<input className="block border p-2" name="name" required minLength={3}/></label><label>Público<select name="audience" className="block border p-2"><option value="customer">Motorista</option><option value="workshop">Oficina</option></select></label><label>Preço em reais<input name="price" type="number" min="0.01" step="0.01" required className="block border p-2"/></label><label>Intervalo em meses<input name="months" type="number" min="1" max="12" defaultValue="1" className="block border p-2"/></label><fieldset><legend>Benefícios incluídos</legend>{benefits.data.map(b=><label key={b.id} className="block"><input type="checkbox" name="benefits" value={b.id}/> {b.name}</label>)}</fieldset></ActionForm></details>
+<details className="bg-white border p-6 rounded-xl"><summary className="font-bold cursor-pointer">Conceder período gratuito</summary><p>Sem cobrança e sem renovação automática. Não substitui um contrato ainda vigente.</p><ActionForm key={subscriptions.length} action={grantTrial} submitLabel="Conceder período"><input name="key" type="hidden" value={randomUUID()}/><label>Plano<select name="plan" className="block border p-2">{plans.filter(p=>p.is_active).map(p=><option key={p.id} value={p.id}>{p.name} — {p.audience==="customer"?"Motorista":"Oficina"}</option>)}</select></label><label>Público<select name="audience" className="block border p-2"><option value="customer">Motorista</option><option value="workshop">Oficina</option></select></label><label>E-mail cadastrado<input name="email" type="email" required className="block border p-2"/></label><label>Duração em dias<input name="days" type="number" min="1" max="365" defaultValue="30" className="block border p-2"/></label><label>Justificativa<textarea name="reason" required minLength={10} maxLength={1000} className="block border p-2 w-full"/></label></ActionForm></details>
       {/* Assinaturas Ativas */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -84,7 +54,7 @@ export default async function AssinaturasPage() {
             <div className="max-w-md mx-auto">
               <h3 className="text-base font-bold text-slate-900">Nenhuma assinatura ativa no momento</h3>
               <p className="text-xs text-slate-500 mt-1">
-                À medida que motoristas e oficinas assinarem planos na plataforma, os registros aparecerão aqui em tempo real com status de pagamento e próximas renovações.
+                À medida que motoristas e oficinas assinarem planos na plataforma, os registros aparecerão aqui em tempo real com situação contratual e período de vigência. O status da assinatura não comprova pagamento.
               </p>
             </div>
             <div className="pt-2 flex justify-center gap-3">
@@ -106,7 +76,7 @@ export default async function AssinaturasPage() {
                     <th className="px-6 py-3">Valor</th>
                     <th className="px-6 py-3">Ciclo</th>
                     <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Próxima Cobrança</th>
+                    <th className="px-6 py-3">Fim do período</th>
                     <th className="px-6 py-3">Início</th>
                   </tr>
                 </thead>

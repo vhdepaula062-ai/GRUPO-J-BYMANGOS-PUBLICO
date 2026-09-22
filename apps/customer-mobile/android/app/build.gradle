@@ -104,8 +104,8 @@ android {
         applicationId 'br.com.grupoj.autocenter.staging'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.1.0"
+        versionCode 8
+        versionName "0.2.6"
     }
     signingConfigs {
         debug {
@@ -115,10 +115,10 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('staging.keystore')
-            storePassword(System.getenv('GJ_STAGING_KEYSTORE_PASSWORD') ?: 'grupojstaging2026')
+            storeFile System.getenv('GJ_STAGING_KEYSTORE_PATH') ? file(System.getenv('GJ_STAGING_KEYSTORE_PATH')) : null
+            storePassword(System.getenv('GJ_STAGING_KEYSTORE_PASSWORD'))
             keyAlias 'stagingkey'
-            keyPassword(System.getenv('GJ_STAGING_KEYSTORE_PASSWORD') ?: 'grupojstaging2026')
+            keyPassword(System.getenv('GJ_STAGING_KEYSTORE_PASSWORD'))
         }
     }
     buildTypes {
@@ -189,5 +189,16 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+// Release credentials are mandatory and must come from protected external storage.
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.name.toLowerCase().contains('release') }) {
+        def keyPath = System.getenv('GJ_STAGING_KEYSTORE_PATH')
+        def keyPassword = System.getenv('GJ_STAGING_KEYSTORE_PASSWORD')
+        if (!keyPath || !new File(keyPath).isAbsolute() || !file(keyPath).isFile() || !keyPassword || keyPassword.length() < 24) {
+            throw new GradleException('Configure an absolute GJ_STAGING_KEYSTORE_PATH and a protected GJ_STAGING_KEYSTORE_PASSWORD of at least 24 characters.')
+        }
     }
 }

@@ -129,7 +129,7 @@ export default function AdminLoginPage() {
                   />
                   <span>Dispositivo confiável</span>
                 </label>
-                <a href="#ajuda" className="font-semibold text-[#034EFE] hover:underline">
+                <a href="/recuperar-senha" className="font-semibold text-[#034EFE] hover:underline">
                   Esqueceu a chave?
                 </a>
               </div>
@@ -147,7 +147,7 @@ export default function AdminLoginPage() {
                 {isLoading ? "Autenticando..." : "Entrar no Painel"}
               </Button>
             </CardFooter>
-          </form>
+          <a href="/recuperar-senha" className="block text-center underline text-sm">Esqueceu a senha?</a></form>
         </Card>
 
         {/* Rodapé de Segurança */}

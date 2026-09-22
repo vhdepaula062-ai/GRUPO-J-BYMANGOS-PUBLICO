@@ -1,128 +1,24 @@
 "use server";
-
-import { createAdminServerClient } from "@/lib/supabase/admin";
-import { checkIsAdmin, assertRecentAuthentication } from "@/lib/supabase/server";
-import { deleteMotoristaAction } from "../clientes/actions";
+import { createAuthorizedAdminClient } from "@/lib/supabase/authorized";
+import { assertRecentAuthentication } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-
-export interface ErasureActionResult {
-  success: boolean;
-  message: string;
+export interface ErasureActionResult { success: boolean; message: string }
+export async function approveErasureRequestAction(requestId: string, userId: string): Promise<ErasureActionResult> {
+  const db = await createAuthorizedAdminClient();
+  const recent = await assertRecentAuthentication(15);
+  if (!recent.success) return { success: false, message: recent.error! };
+  const { data: request, error } = await db.from("account_erasure_requests").select("id,user_id,status").eq("id",requestId).single();
+  if (error || !request || request.user_id !== userId || !["requested","identity_check"].includes(request.status)) return { success: false, message: "Solicitação ou vínculo do titular inválido." };
+  const { error: updateError } = await db.from("account_erasure_requests").update({status:"identity_check",notes:"Em análise: confirmar identidade, escopo e retenção legal antes da eliminação. Nenhum dado foi eliminado."}).eq("id",requestId).eq("status",request.status);
+  if (updateError) return { success: false, message: "Não foi possível registrar a análise." };
+  revalidatePath("/privacidade");
+  return { success: true, message: "Pedido encaminhado para análise de identidade e retenção. A eliminação ainda não foi executada." };
 }
-
-/**
- * Aprova e executa a exclusão definitiva do titular de dados (LGPD)
- */
-export async function approveErasureRequestAction(
-  requestId: string,
-  userId: string
-): Promise<ErasureActionResult> {
-  if (!requestId || !userId) {
-    return {
-      success: false,
-      message: "Dados da requisição inválidos."
-    };
-  }
-
-  const isAdmin = await checkIsAdmin();
-  if (!isAdmin) {
-    return { success: false, message: "Acesso não autorizado. Apenas administradores podem processar exclusões." };
-  }
-
-  const recentAuth = await assertRecentAuthentication(15);
-  if (!recentAuth.success) {
-    return { success: false, message: recentAuth.error || "Reautenticação necessária para executar exclusão de dados." };
-  }
-
-  const supabase = createAdminServerClient();
-
-  try {
-    // 1. Localiza o customer_id vinculado ao profile (se existir)
-    const { data: customer } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("profile_id", userId)
-      .maybeSingle();
-
-    if (customer?.id) {
-      // Executa a remoção completa da conta e dados do motorista
-      const delResult = await deleteMotoristaAction(customer.id, userId);
-      if (!delResult.success) {
-        throw new Error(delResult.message || "Falha ao apagar dados do motorista.");
-      }
-    } else {
-      // Caso seja um usuário sem registro em customers (ex: oficina ou usuário com perfil direto)
-      await supabase.from("sessions_metadata").delete().eq("user_id", userId);
-      await supabase.from("user_roles").delete().eq("user_id", userId);
-      await supabase.from("profiles").delete().eq("id", userId);
-      try {
-        await supabase.auth.admin.deleteUser(userId);
-      } catch (authErr) {
-        console.warn("[approveErasureRequestAction] Auth notice:", authErr);
-      }
-    }
-
-    // 2. Atualiza o status do pedido de exclusão para 'completed'
-    await supabase
-      .from("account_erasure_requests")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        notes: "Exclusão executada e aprovada pelo Administrador sob conformidade LGPD."
-      })
-      .eq("id", requestId);
-
-    revalidatePath("/privacidade");
-    revalidatePath("/clientes");
-    revalidatePath("/dashboard");
-
-    return {
-      success: true,
-      message: "Exclusão de dados aprovada e finalizada com sucesso."
-    };
-  } catch (error) {
-    console.error("[approveErasureRequestAction] Erro:", error);
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Erro ao processar exclusão LGPD."
-    };
-  }
-}
-
-/**
- * Recusa o pedido de exclusão com justificativa legal
- */
-export async function rejectErasureRequestAction(
-  requestId: string,
-  reason: string
-): Promise<ErasureActionResult> {
-  if (!requestId) {
-    return { success: false, message: "ID da requisição ausente." };
-  }
-
-  const supabase = createAdminServerClient();
-
-  try {
-    const { error } = await supabase
-      .from("account_erasure_requests")
-      .update({
-        status: "rejected",
-        notes: reason || "Pedido recusado por base legal ou ausência de confirmação de identidade."
-      })
-      .eq("id", requestId);
-
-    if (error) throw error;
-
-    revalidatePath("/privacidade");
-
-    return {
-      success: true,
-      message: "Solicitação marcada como recusada."
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Erro ao recusar solicitação."
-    };
-  }
+export async function rejectErasureRequestAction(requestId: string, reason: string): Promise<ErasureActionResult> {
+  const db = await createAuthorizedAdminClient();
+  if (!requestId || reason.trim().length < 20 || reason.length > 2000) return {success:false,message:"Informe uma justificativa específica, com pelo menos 20 caracteres, e comunique o titular."};
+  const { data, error } = await db.from("account_erasure_requests").update({status:"rejected",notes:reason.trim()}).eq("id",requestId).in("status",["requested","identity_check"]).select("id").maybeSingle();
+  if (error || !data) return {success:false,message:"Solicitação não encontrada, já encerrada ou atualização indisponível."};
+  revalidatePath("/privacidade");
+  return {success:true,message:"Justificativa registrada. O titular deve ser informado pelo canal de atendimento."};
 }

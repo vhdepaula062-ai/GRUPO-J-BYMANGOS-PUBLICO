@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export default async function ClientesAdminPage({
   searchParams
 }: {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }) {
-  const search = searchParams?.q ?? "";
+  const search = (await searchParams)?.q ?? "";
   const motoristas = await getMotoristas(search);
 
   return (

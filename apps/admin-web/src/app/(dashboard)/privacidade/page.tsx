@@ -1,11 +1,11 @@
 import React from "react";
-import { createAdminServerClient } from "@/lib/supabase/admin";
+import { createAuthorizedAdminClient } from "@/lib/supabase/authorized";
 import { PrivacidadeClient, type ErasureItem } from "./PrivacidadeClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function PrivacidadePage() {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
   const { data } = await supabase
     .from("account_erasure_requests")
     .select(`

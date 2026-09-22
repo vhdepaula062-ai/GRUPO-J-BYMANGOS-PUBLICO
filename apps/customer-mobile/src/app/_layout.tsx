@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -12,6 +12,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 function RootContent() {
   const { isInitialized } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
+  const finishSplash = useCallback(() => setShowSplash(false), []);
 
   return (
     <>
@@ -25,7 +26,7 @@ function RootContent() {
       {showSplash && (
         <AnimatedSplashScreen
           isReady={isInitialized}
-          onFinish={() => setShowSplash(false)}
+          onFinish={finishSplash}
         />
       )}
     </>
@@ -41,4 +42,3 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
-

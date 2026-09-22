@@ -87,7 +87,7 @@ export function DataTable<T>({
           {data.map((item, index) => (
             <tr
               key={keyExtractor(item, index)}
-              onClick={() => onRowClick?.(item)}
+              onClick={onRowClick ? () => onRowClick(item) : undefined}
               className={cn(
                 "transition-colors duration-150",
                 onRowClick ? "cursor-pointer hover:bg-blue-50/30" : "hover:bg-slate-50/60"

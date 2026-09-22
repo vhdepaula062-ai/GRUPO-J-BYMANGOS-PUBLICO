@@ -6,6 +6,7 @@ import { MobileCard, MobileBadge, MobileButton } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
 import { api } from "../../lib/api";
 import { useApiResource } from "../../hooks/useApiResource";
+import { BrandLogo } from "../../components/BrandLogo";
 
 type HomeData = {
   profile: { full_name: string };
@@ -52,6 +53,7 @@ export default function InicioScreen() {
         }
       >
         {/* Topo / Boas-vindas */}
+        <BrandLogo />
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Olá, {data.profile.full_name.split(" ")[0]} 👋</Text>

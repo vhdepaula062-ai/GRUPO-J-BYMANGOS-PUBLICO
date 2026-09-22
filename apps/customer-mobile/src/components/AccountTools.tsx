@@ -1,0 +1,11 @@
+import React,{useState} from "react";
+import {Text,Alert,Share,View} from "react-native";
+import {MobileCard,MobileInput,MobileButton} from "@grupo-j/ui-mobile";
+import {useRouter} from "expo-router";
+import {api} from "../lib/api";
+export function AccountTools({profile,reload}:{profile:{full_name:string;phone:string|null};reload:()=>Promise<void>}){
+ const router=useRouter();const [name,setName]=useState(profile.full_name),[phone,setPhone]=useState(profile.phone??""),[password,setPassword]=useState(""),[busy,setBusy]=useState(false);
+ async function save(){setBusy(true);try{await api.patch("/api/v1/me",{fullName:name,phone});await reload();Alert.alert("Cadastro atualizado");}catch(e){Alert.alert("Não foi possível salvar",e instanceof Error?e.message:"Tente novamente.");}finally{setBusy(false);}}
+ async function download(){setBusy(true);try{const r=await api.post("/api/v1/me/export",{password});setPassword("");await Share.share({title:"Meus dados Grupo J",message:JSON.stringify(r.data,null,2)});}catch(e){Alert.alert("Exportação indisponível",e instanceof Error?e.message:"Tente novamente.");}finally{setBusy(false);}}
+ return <MobileCard><Text style={{fontWeight:"700",fontSize:16}}>Gerenciar minha conta</Text><MobileInput label="Nome completo" value={name} onChangeText={setName}/><MobileInput label="Celular" value={phone} onChangeText={setPhone} keyboardType="phone-pad"/><MobileButton label="Salvar cadastro" onPress={save} isLoading={busy}/><View style={{height:16}}/><Text>Para exportar seus dados, confirme sua senha. Escolha um destino privado ao compartilhar.</Text><MobileInput label="Senha atual" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none"/><MobileButton label="Exportar meus dados" onPress={download} disabled={!password} isLoading={busy}/><View style={{height:16}}/><MobileButton label="Atendimento e pedidos de privacidade" variant="outline" onPress={()=>router.push("/(app)/atendimento")}/><View style={{height:12}}/><MobileButton label="Minhas notificações" variant="outline" onPress={()=>router.push("/(app)/notificacoes")}/><View style={{height:12}}/><MobileButton label="Privacidade e termos" variant="outline" onPress={()=>router.push("/legal")}/></MobileCard>;
+}

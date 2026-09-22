@@ -10,9 +10,9 @@ import { OficinasModerator } from "./OficinasModerator";
 export default async function OficinasAdminPage({
   searchParams
 }: {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }) {
-  const search = searchParams?.q ?? "";
+  const search = (await searchParams)?.q ?? "";
   const oficinas = await getWorkshops(search);
 
   return (

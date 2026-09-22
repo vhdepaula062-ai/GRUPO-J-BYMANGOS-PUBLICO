@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -49,7 +50,7 @@ function WorkshopAuthForm() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(true);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   // Submissão de Login
   const handleLogin = async (e: React.FormEvent) => {
@@ -96,9 +97,9 @@ function WorkshopAuthForm() {
     setError(null);
     setSuccessMessage(null);
 
-    if (registerPassword.length < 6) {
+    if (registerPassword.length < 10) {
       setIsLoading(false);
-      setError("A senha deve ter pelo menos 6 caracteres.");
+      setError("A senha deve ter pelo menos 10 caracteres.");
       return;
     }
 
@@ -110,7 +111,7 @@ function WorkshopAuthForm() {
 
     if (!acceptedTerms) {
       setIsLoading(false);
-      setError("É necessário concordar com os Termos de Parceria e LGPD.");
+      setError("Confirme a solicitação de análise do credenciamento.");
       return;
     }
 
@@ -121,7 +122,8 @@ function WorkshopAuthForm() {
         contactName: contactName.trim(),
         phone: phone.trim(),
         email: registerEmail.trim().toLowerCase(),
-        password: registerPassword
+        password: registerPassword,
+        intakeAccepted: acceptedTerms
       });
 
       setIsLoading(false);
@@ -257,7 +259,7 @@ function WorkshopAuthForm() {
                     />
                     <span>Lembrar e-mail</span>
                   </label>
-                  <a href="#recuperar" className="font-semibold text-[#034EFE] hover:underline">
+                  <a href="/recuperar-senha" className="font-semibold text-[#034EFE] hover:underline">
                     Esqueceu a senha?
                   </a>
                 </div>
@@ -355,12 +357,12 @@ function WorkshopAuthForm() {
                 >
                   Ir para a Tela de Login
                 </button>
-                <a
+                <Link
                   href="/"
                   className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors"
                 >
                   Página Inicial
-                </a>
+                </Link>
               </div>
             </div>
           ) : (
@@ -431,7 +433,7 @@ function WorkshopAuthForm() {
                   <PasswordInput
                     label="Criar Senha *"
                     required
-                    placeholder="Mínimo 6 dígitos"
+                    placeholder="Mínimo 10 caracteres"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     disabled={isLoading}
@@ -456,7 +458,7 @@ function WorkshopAuthForm() {
                     className="rounded border-slate-300 text-[#034EFE] focus:ring-[#034EFE] shrink-0"
                   />
                   <label htmlFor="terms" className="cursor-pointer">
-                    Concordo com os <span className="font-bold text-[#034EFE]">Termos de Parceria Credenciada</span> e a <span className="font-bold text-[#034EFE]">Política LGPD</span> do Grupo J.
+                    Solicito a análise do credenciamento e contato sobre este pedido. <a href="/legal" className="font-bold text-[#034EFE] underline">Consultar privacidade e termos</a>.
                   </label>
                 </div>
               </CardContent>
@@ -496,7 +498,7 @@ function WorkshopAuthForm() {
 
         {/* Rodapé Seguro */}
         <p className="text-center text-[11px] text-slate-400 mt-6">
-          Sessão protegida por criptografia AES-256 e conformidade com a LGPD (Lei 13.709/2018).
+          Acesso protegido por autenticação. Cuide das suas credenciais.
         </p>
       </div>
     </div>

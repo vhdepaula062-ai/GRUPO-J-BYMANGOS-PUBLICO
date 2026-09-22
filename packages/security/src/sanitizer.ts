@@ -10,11 +10,11 @@ export class DataSanitizer {
     "authorization",
     "cvv",
     "pan",
-    "cardNumber",
+    "cardnumber",
     "card_number",
-    "securityCode",
+    "securitycode",
     "access_token",
-    "refresh_token"
+    "refresh_token", "accesstoken", "refreshtoken", "cpf", "cpf_encrypted", "cpf_blind_index", "cnpj", "cnpj_blind_index", "email", "phone", "telefone", "full_name", "fullname", "cookie", "set-cookie", "apikey", "api_key", "supabase_service_role_key"
   ]);
 
   /**
@@ -22,6 +22,8 @@ export class DataSanitizer {
    */
   public static sanitizeString(text: string): string {
     return text
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]")
+      .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED_TOKEN]")
       .replace(this.PAN_REGEX, "[REDACTED_PAN]")
       .replace(this.CPF_REGEX, "[REDACTED_CPF]");
   }

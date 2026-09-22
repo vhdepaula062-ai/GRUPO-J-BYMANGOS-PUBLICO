@@ -1,15 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Easing,
-  AccessibilityInfo,
-  Dimensions,
-  Image,
-  Platform
-} from "react-native";
+import { AccessibilityInfo, Animated, Easing, Image, StyleSheet } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 
 interface AnimatedSplashScreenProps {
@@ -17,167 +7,92 @@ interface AnimatedSplashScreenProps {
   onFinish: () => void;
 }
 
-// Garante que a animação rode estritamente UMA vez por instância do aplicativo
 let hasShownAnimatedSplash = false;
 
 export function AnimatedSplashScreen({ isReady, onFinish }: AnimatedSplashScreenProps) {
+  const [imageReady, setImageReady] = useState(false);
   const [animationDone, setAnimationDone] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(0.96)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-  const containerOpacity = useRef(new Animated.Value(1)).current;
-  const isMounted = useRef(true);
+  const scale = useRef(new Animated.Value(0.96)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const mounted = useRef(true);
+
+  // An image failure must not leave the native splash covering the app forever.
+  useEffect(() => {
+    const fallback = setTimeout(() => setImageReady(true), 1500);
+    return () => clearTimeout(fallback);
+  }, []);
 
   useEffect(() => {
-    isMounted.current = true;
-
-    // Se já exibiu a animação nesta instância de execução, encerra imediatamente
+    mounted.current = true;
     if (hasShownAnimatedSplash) {
       onFinish();
-      return () => {
-        isMounted.current = false;
-      };
+      return () => { mounted.current = false; };
     }
+    if (!imageReady) return;
 
-    let isReduceMotion = false;
-    let animSequence: Animated.CompositeAnimation | null = null;
+    let animation: Animated.CompositeAnimation | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const startAnimation = async () => {
-      try {
-        isReduceMotion = await AccessibilityInfo.isReduceMotionEnabled();
-      } catch {
-        isReduceMotion = false;
-      }
-
-      // 1. Oculta o splash nativo assim que a camada React Native estiver pronta
-      try {
-        await SplashScreen.hideAsync();
-      } catch {
-        // Ignora se o splash nativo já foi ocultado
-      }
-
-      if (isReduceMotion) {
-        // Modo acessibilidade: sem escala, apenas transição estática rápida
-        scaleAnim.setValue(1);
-        glowAnim.setValue(0);
-
-        timer = setTimeout(() => {
-          if (isMounted.current) {
-            setAnimationDone(true);
-          }
-        }, 500);
+    const start = async () => {
+      const reduceMotion = await AccessibilityInfo.isReduceMotionEnabled().catch(() => false);
+      // The official logo has loaded before the native splash is removed.
+      await SplashScreen.hideAsync().catch(() => undefined);
+      if (!mounted.current) return;
+      if (reduceMotion) {
+        scale.setValue(1);
+        timer = setTimeout(() => { if (mounted.current) setAnimationDone(true); }, 600);
         return;
       }
-
-      // Modo padrão: escala sutil de 0.96 para 1.0 com destaque azul suave (~800ms)
-      animSequence = Animated.parallel([
-        Animated.timing(scaleAnim, {
-          toValue: 1.0,
-          duration: 850,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true
-        }),
-        Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 1,
-            duration: 500,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0.5,
-            duration: 350,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true
-          })
-        ])
-      ]);
-
-      animSequence.start(({ finished }) => {
-        if (finished && isMounted.current) {
-          setAnimationDone(true);
-        }
+      animation = Animated.timing(scale, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true
+      });
+      animation.start(({ finished }) => {
+        if (finished && mounted.current) setAnimationDone(true);
       });
     };
-
-    void startAnimation();
-
+    void start();
     return () => {
-      isMounted.current = false;
+      mounted.current = false;
       if (timer) clearTimeout(timer);
-      if (animSequence) animSequence.stop();
+      animation?.stop();
     };
-  }, [onFinish, scaleAnim, glowAnim]);
+  }, [imageReady, onFinish, scale]);
 
-  // Transição de saída suave por opacidade quando a animação terminar E o app estiver pronto
   useEffect(() => {
     if (!animationDone || !isReady) return;
-
-    Animated.timing(containerOpacity, {
+    Animated.timing(opacity, {
       toValue: 0,
       duration: 300,
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: true
     }).start(({ finished }) => {
-      if (finished && isMounted.current) {
+      if (finished && mounted.current) {
         hasShownAnimatedSplash = true;
         onFinish();
       }
     });
-  }, [animationDone, isReady, containerOpacity, onFinish]);
+  }, [animationDone, isReady, onFinish, opacity]);
 
-  if (hasShownAnimatedSplash) {
-    return null;
-  }
+  if (hasShownAnimatedSplash) return null;
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          opacity: containerOpacity
-        }
-      ]}
-      pointerEvents="none"
-    >
-      <Animated.View
-        style={[
-          styles.contentWrapper,
-          {
-            transform: [{ scale: scaleAnim }]
-          }
-        ]}
-      >
-        {/* Halo de destaque azul discreto atrás do símbolo */}
-        <Animated.View
-          style={[
-            styles.glowRing,
-            {
-              opacity: glowAnim
-            }
-          ]}
-        />
-
-        {/* Símbolo oficial do Grupo J */}
+    <Animated.View style={[styles.container, { opacity }]} pointerEvents="none">
+      <Animated.View style={[styles.content, { transform: [{ scale }] }]}>
         <Image
-          source={require("../../assets/adaptive-icon.png")}
-          style={styles.symbolImage}
+          source={require("../../assets/brand-horizontal.png")}
+          accessibilityLabel="Grupo J — Auto App"
+          style={styles.logo}
           resizeMode="contain"
           fadeDuration={0}
+          onLoadEnd={() => setImageReady(true)}
+          onError={() => setImageReady(true)}
         />
-
-        {/* Lettering oficial da marca */}
-        <View style={styles.textBlock}>
-          <Text style={styles.brandTitle}>GRUPO J</Text>
-          <Text style={styles.brandSubtitle}>CLUBE DE BENEFÍCIOS</Text>
-        </View>
       </Animated.View>
     </Animated.View>
   );
 }
-
-const { width } = Dimensions.get("window");
-const SYMBOL_SIZE = Math.min(width * 0.38, 150);
 
 const styles = StyleSheet.create({
   container: {
@@ -187,50 +102,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 999999
   },
-  contentWrapper: {
+  content: {
+    width: "100%",
+    paddingHorizontal: 24,
     alignItems: "center",
     justifyContent: "center"
   },
-  glowRing: {
-    position: "absolute",
-    width: SYMBOL_SIZE * 1.35,
-    height: SYMBOL_SIZE * 1.35,
-    borderRadius: SYMBOL_SIZE * 0.35,
-    backgroundColor: "#034EFE",
-    // Suave difusão no Android e iOS
-    ...Platform.select({
-      ios: {
-        shadowColor: "#034EFE",
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 28
-      },
-      android: {
-        elevation: 8
-      }
-    })
-  },
-  symbolImage: {
-    width: SYMBOL_SIZE,
-    height: SYMBOL_SIZE
-  },
-  textBlock: {
-    marginTop: 22,
-    alignItems: "center"
-  },
-  brandTitle: {
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: 2,
-    color: "#FFFFFF",
-    textTransform: "uppercase"
-  },
-  brandSubtitle: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 3.5,
-    color: "#034EFE",
-    textTransform: "uppercase",
-    marginTop: 5
+  logo: {
+    width: "100%",
+    maxWidth: 360,
+    height: 60
   }
 });

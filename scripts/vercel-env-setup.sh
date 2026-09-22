@@ -50,11 +50,11 @@ configure_project() {
   echo "$SUPABASE_ANON_KEY" | npx -y vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production --project "$PROJECT" --yes 2>/dev/null || true
 
   # Variáveis secretas (apenas no servidor)
-  echo "$SUPABASE_SERVICE_ROLE" | npx -y vercel env add SUPABASE_SERVICE_ROLE_KEY production --project "$PROJECT" --yes 2>/dev/null || true
-  echo "$CPF_ENCRYPTION_KEY" | npx -y vercel env add CPF_ENCRYPTION_KEY production --project "$PROJECT" --yes 2>/dev/null || true
-  echo "$CPF_BLIND_INDEX_PEPPER" | npx -y vercel env add CPF_BLIND_INDEX_PEPPER production --project "$PROJECT" --yes 2>/dev/null || true
-  echo "$SESSION_SECRET" | npx -y vercel env add SESSION_SECRET production --project "$PROJECT" --yes 2>/dev/null || true
-  echo "fake" | npx -y vercel env add PAYMENT_GATEWAY_PROVIDER production --project "$PROJECT" --yes 2>/dev/null || true
+  echo "$SUPABASE_SERVICE_ROLE" | npx -y vercel env add SUPABASE_SERVICE_ROLE_KEY production --project "$PROJECT" --sensitive --type secret --yes 2>/dev/null || true
+  echo "$CPF_ENCRYPTION_KEY" | npx -y vercel env add CPF_ENCRYPTION_KEY production --project "$PROJECT" --sensitive --type secret --yes 2>/dev/null || true
+  echo "$CPF_BLIND_INDEX_PEPPER" | npx -y vercel env add CPF_BLIND_INDEX_PEPPER production --project "$PROJECT" --sensitive --type secret --yes 2>/dev/null || true
+  echo "$SESSION_SECRET" | npx -y vercel env add SESSION_SECRET production --project "$PROJECT" --sensitive --type secret --yes 2>/dev/null || true
+  echo "disabled" | npx -y vercel env add PAYMENT_GATEWAY_PROVIDER production --project "$PROJECT" --yes 2>/dev/null || true
   echo "production" | npx -y vercel env add NODE_ENV production --project "$PROJECT" --yes 2>/dev/null || true
 
   echo "✅ $PROJECT configurado!"

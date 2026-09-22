@@ -34,7 +34,7 @@ export function EcosystemCommandCenter({
 }: EcosystemCommandCenterProps) {
   const [isPending, startTransition] = useTransition();
   const [syncData, setSyncData] = useState<SyncEcosystemResult | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState<string>("Agora mesmo");
+  const [lastSyncTime, setLastSyncTime] = useState<string>("Ainda não consultado");
   const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   const handleSyncEcosystem = () => {
@@ -46,13 +46,11 @@ export function EcosystemCommandCenter({
   };
 
   const handleExportConsolidatedReport = () => {
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      "Nó,Status,Entidades Ativas,Latência,Segurança\n" +
-      `Admin Central,Sincronizado,1 Super Admin (Joaquim),12ms,RLS PostgreSQL Ativo\n` +
-      `Oficinas Parceiras,Conectado,${initialWorkshopsCount} Centros,15ms,Isolamento por Organização\n` +
-      `Motoristas Assinantes,Em Operação,${initialMotoristasCount} Veículos,14ms,Criptografia AES-256\n` +
-      `Catálogo de Benefícios,Publicado,4 Serviços Preventivos,8ms,Regras de Elegibilidade Ativas\n`;
+    const csvContent = "data:text/csv;charset=utf-8," +
+      "Indicador,Quantidade,Consulta\n" +
+      `Oficinas ativas,${initialWorkshopsCount},${lastSyncTime}\n` +
+      `Motoristas cadastrados,${initialMotoristasCount},${lastSyncTime}\n` +
+      "Conciliação financeira,Não integrada,Não verificada\n";
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -76,13 +74,13 @@ export function EcosystemCommandCenter({
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider border border-blue-500/30 backdrop-blur-sm">
               <Zap size={13} className="text-amber-300 animate-pulse" />
-              <span>Centro de Comando & Sincronização em Tempo Real</span>
+              <span>Centro de Consulta do Ecossistema</span>
             </div>
             <h2 className="text-2xl font-black text-white tracking-tight">
               Controle Total do Ecossistema Grupo J
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Supervisão centralizada com latência ultrabaixa. Revalidação instantânea de dados entre o Painel Corporativo, a Rede de Oficinas e os Benefícios dos Motoristas.
+              Atualização das consultas deste painel. A confirmação de pagamentos depende da integração e conciliação com o gateway.
             </p>
           </div>
 
@@ -101,7 +99,7 @@ export function EcosystemCommandCenter({
                 />
               }
             >
-              {isPending ? "Sincronizando Rede..." : "⚡ Sincronizar Todo o Ecossistema"}
+              {isPending ? "Sincronizando Rede..." : "Atualizar consultas do painel"}
             </Button>
           </div>
         </div>
@@ -134,11 +132,11 @@ export function EcosystemCommandCenter({
               <span className="text-xs font-bold text-slate-200">1. Admin Corporativo</span>
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                100% Sincronizado
+                Consulta ao banco
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              RLS ativo • Gestão de permissões de Joaquim • Telemetria contínua
+              Informações consultadas pelo perfil administrativo
             </p>
           </div>
 
@@ -152,7 +150,7 @@ export function EcosystemCommandCenter({
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Validador de Vouchers integrado • Repasse de R$ 500/mês garantido
+              Validador de Vouchers integrado • Repasses ainda não integrados
             </p>
           </div>
 
@@ -162,11 +160,11 @@ export function EcosystemCommandCenter({
               <span className="text-xs font-bold text-slate-200">3. Benefícios & Motoristas</span>
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                4 Regras Ativas
+                Catálogo cadastrado
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Alinhamento, Balanceamento, Higienização A/C e Rodízio de Pneus
+              Benefícios conforme as regras vigentes no banco
             </p>
           </div>
         </div>

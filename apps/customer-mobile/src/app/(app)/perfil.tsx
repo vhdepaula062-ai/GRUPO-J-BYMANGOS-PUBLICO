@@ -1,3 +1,4 @@
+import {AccountTools} from "../../components/AccountTools";
 import React, { useCallback } from "react";
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
@@ -8,13 +9,15 @@ import { api } from "../../lib/api";
 import { useApiResource } from "../../hooks/useApiResource";
 import { useAuth } from "../../providers/AuthProvider";
 
-type ProfileData = { profile: { full_name: string; email: string; cpf_masked: string | null; phone: string | null }; subscriptions: Array<{ status: string; plan: { name: string; price_cents: number } }> };
+type ProfileData = { profile: { full_name: string; email: string; cpf_masked: string | null; phone: string | null }; subscriptions: Array<{ id:string; current_period_end:string; cancel_at_period_end:boolean; status: string; plan: { name: string; price_cents: number } }> };
 
 export default function PerfilScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const load = useCallback(() => api.getMe<ProfileData>(), []);
-  const { data, loading, error } = useApiResource(load);
+  const { data, loading, error, reload } = useApiResource(load);
+  const loadPayments = useCallback(() => api.getPayments<Array<{ id: string; status: string; amount_cents: number; currency: string; created_at: string }>>(), []);
+  const payments = useApiResource(loadPayments);
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -70,15 +73,29 @@ export default function PerfilScreen() {
           </View>
         </MobileCard>
 
+        <AccountTools profile={data.profile} reload={reload}/>
         {/* Assinatura e Pagamento */}
         <MobileCard>
           <View style={styles.subHeader}>
             <Text style={styles.cardSectionTitle}>Assinatura Mensal</Text>
-            <MobileBadge label={data.subscriptions?.[0]?.status === "active" ? "Ativa" : "Pendente"} variant={data.subscriptions?.[0]?.status === "active" ? "success" : "warning"} />
+            <MobileBadge label={data.subscriptions?.[0]?.status === "active" && new Date(data.subscriptions[0].current_period_end).getTime()>Date.now() ? "Ativa" : "Pendente"} variant={data.subscriptions?.[0]?.status === "active" && new Date(data.subscriptions[0].current_period_end).getTime()>Date.now() ? "success" : "warning"} />
           </View>
           <Text style={styles.subDesc}>{data.subscriptions?.[0]?.plan?.name ?? "Nenhuma assinatura contratada"}</Text>
+          {data.subscriptions?.[0]&&<><Text>Vigência até {new Date(data.subscriptions[0].current_period_end).toLocaleDateString("pt-BR")}</Text>{data.subscriptions[0].cancel_at_period_end?<Text>Renovação desativada.</Text>:<MobileButton label="Cancelar ao fim da vigência" variant="outline" onPress={()=>Alert.alert("Cancelar renovação","O acesso permanece até o fim do período atual.",[{text:"Voltar",style:"cancel"},{text:"Confirmar",onPress:async()=>{try{await api.post("/api/v1/subscriptions/cancel",{id:data.subscriptions[0]!.id});await reload();}catch(e){Alert.alert("Não foi possível cancelar",e instanceof Error?e.message:"Tente novamente.");}}}])}/>}</>}
+
         </MobileCard>
         </> : null}
+
+        <MobileCard>
+          <Text style={styles.cardSectionTitle}>Pagamentos registrados</Text>
+          {payments.loading ? <ActivityIndicator /> : null}
+          {payments.error ? <Text style={{ color: tokens.colors.status.danger }}>{payments.error}</Text> : null}
+          {!payments.loading && !payments.error && payments.data?.length === 0 ? <Text>Nenhum pagamento registrado. Assinatura ativa não comprova pagamento.</Text> : null}
+          {!payments.error ? payments.data?.map(payment => <View key={payment.id} style={styles.infoRow}>
+            <Text>{new Date(payment.created_at).toLocaleDateString("pt-BR")}</Text>
+            <Text>{(payment.amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: payment.currency })} — {({ paid: "Pago", pending: "Pendente", authorized: "Autorizado", failed: "Falhou", refunded: "Estornado", charged_back: "Contestado" } as Record<string, string>)[payment.status] ?? payment.status}</Text>
+          </View>) : null}
+        </MobileCard>
 
         {/* Conformidade e Privacidade LGPD / App Store */}
         <MobileCard>

@@ -5,12 +5,12 @@ import { isSafeRedirectPath, isSafeHttpUrl, isSafeImageUrl, sanitizePlainText } 
 
 describe("Auditoria e Hardening de Segurança (Etapa 9 - Testes de Regressão)", () => {
   describe("1. Rate Limiting e Prevenção de Abuso", () => {
-    it("permite requisições dentro do limite configurado", () => {
+    it("permite requisições dentro do limite configurado", async () => {
       const req = new NextRequest("http://localhost:3000/api/v1/auth/login", {
         headers: { "x-forwarded-for": "192.168.1.50" }
       });
 
-      const res = checkRateLimit(req, {
+      const res = await checkRateLimit(req, {
         maxRequests: 3,
         windowMs: 10000,
         keyPrefix: "test-login"
@@ -19,7 +19,7 @@ describe("Auditoria e Hardening de Segurança (Etapa 9 - Testes de Regressão)",
       expect(res).toBeNull();
     });
 
-    it("bloqueia com HTTP 429 Too Many Requests ao exceder limite", () => {
+    it("bloqueia com HTTP 429 Too Many Requests ao exceder limite", async () => {
       const ip = "10.0.0.99";
       const config = { maxRequests: 2, windowMs: 10000, keyPrefix: "test-bruteforce" };
 
@@ -29,11 +29,11 @@ describe("Auditoria e Hardening de Segurança (Etapa 9 - Testes de Regressão)",
         });
 
       // Req 1 & 2 permitidas
-      expect(checkRateLimit(makeReq(), config)).toBeNull();
-      expect(checkRateLimit(makeReq(), config)).toBeNull();
+      expect(await checkRateLimit(makeReq(), config)).toBeNull();
+      expect(await checkRateLimit(makeReq(), config)).toBeNull();
 
       // Req 3 excede limite
-      const blocked = checkRateLimit(makeReq(), config);
+      const blocked = await checkRateLimit(makeReq(), config);
       expect(blocked).not.toBeNull();
       expect(blocked?.status).toBe(429);
       expect(blocked?.headers.get("Retry-After")).toBeDefined();

@@ -2,6 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { checkIsAdmin } from "@/lib/supabase/server";
+import { FinancialRefresh } from "@/components/FinancialRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,5 @@ export default async function DashboardLayout({
     redirect("/login?error=unauthorized");
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  return <AdminShell><FinancialRefresh />{children}</AdminShell>;
 }
-

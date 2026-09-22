@@ -105,13 +105,13 @@ export default async function AdminDashboardPage() {
       <StaggerContainer staggerDelay={0.06} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <StaggerItem>
           <KpiCard
-            title="MRR Consolidado"
+            title="Recorrência contratada (bruta)"
             value={mrrFormatted}
-            subtitle={isFirstRun ? "Nenhuma assinatura ativa ainda" : "Receita recorrente mensal"}
+            subtitle={isFirstRun ? "Nenhuma assinatura ativa ainda" : "Projeção de planos ativos; não é recebimento"}
             icon={<DollarSign size={20} />}
             badge={
               kpis.mrr > 0
-                ? { text: `${formatNumber(kpis.activeMotoristasCount + kpis.activeWorkshopsCount)} contratos`, variant: "success" }
+                ? { text: "Sem descontos ou isenções", variant: "success" }
                 : { text: "Aguardando cadastros", variant: "neutral" }
             }
           />
@@ -119,13 +119,13 @@ export default async function AdminDashboardPage() {
 
         <StaggerItem>
           <KpiCard
-            title="Motoristas Ativos"
+            title="Motoristas Cadastrados"
             value={formatNumber(kpis.activeMotoristasCount)}
-            subtitle="R$ 50,00/mês por assinante"
+            subtitle="Cadastros não representam pagamentos"
             icon={<Users size={20} />}
             badge={
               kpis.activeMotoristasCount > 0
-                ? { text: formatCents(kpis.activeMotoristasCount * 5000) + "/mês", variant: "info" }
+                ? { text: "Cadastros registrados", variant: "info" }
                 : { text: "Nenhum ainda", variant: "neutral" }
             }
           />
@@ -135,11 +135,11 @@ export default async function AdminDashboardPage() {
           <KpiCard
             title="Oficinas Credenciadas"
             value={formatNumber(kpis.activeWorkshopsCount)}
-            subtitle="R$ 500,00/mês por oficina parceira"
+            subtitle="Credenciamento não representa pagamento"
             icon={<Wrench size={20} />}
             badge={
               kpis.activeWorkshopsCount > 0
-                ? { text: formatCents(kpis.activeWorkshopsCount * 50000) + "/mês", variant: "info" }
+                ? { text: "Oficinas ativas", variant: "info" }
                 : { text: "Nenhuma ainda", variant: "neutral" }
             }
           />
@@ -241,11 +241,11 @@ export default async function AdminDashboardPage() {
               <CardContent className="space-y-3 text-xs">
                 <div className="flex items-center justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-600 font-medium">PostgreSQL Row Level Security:</span>
-                  <Badge variant="success" size="sm">100% Ativo</Badge>
+                  <Badge variant="success" size="sm">Revisado em 18/09</Badge>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-600 font-medium">Criptografia AES-256 + Blind Index:</span>
-                  <Badge variant="success" size="sm">LGPD Conforme</Badge>
+                  <Badge variant="success" size="sm">Documentos protegidos</Badge>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-slate-100">
                   <span className="text-slate-600 font-medium">Gateway PagSeguro:</span>
@@ -253,7 +253,7 @@ export default async function AdminDashboardPage() {
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <span className="text-slate-600 font-medium">Sessão Break-Glass:</span>
-                  <Badge variant="neutral" size="sm">Inativa (Protegida)</Badge>
+                  <Badge variant="neutral" size="sm">Não disponível</Badge>
                 </div>
               </CardContent>
             </Card>

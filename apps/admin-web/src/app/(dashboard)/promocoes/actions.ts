@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminServerClient } from "@/lib/supabase/admin";
+import { createAuthorizedAdminClient } from "@/lib/supabase/authorized";
 import { revalidatePath } from "next/cache";
 import { isSafeImageUrl, sanitizePlainText } from "@grupo-j/validation";
 
@@ -10,7 +10,7 @@ import { isSafeImageUrl, sanitizePlainText } from "@grupo-j/validation";
 
 export async function updatePromotionStatus(promotionId: string, newStatus: "approved" | "rejected") {
   try {
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedAdminClient();
 
     const { error } = await supabase
       .from("promotions")
@@ -38,14 +38,15 @@ export async function updatePromotionStatus(promotionId: string, newStatus: "app
 // HELPER — Obter ou garantir organização da rede
 // ---------------------------------------------------------------------------
 
-async function getOrCreateNetworkOrganizationId(): Promise<string> {
-  const supabase = createAdminServerClient();
+async function getNetworkOrganizationId(): Promise<string> {
+  const supabase = await createAuthorizedAdminClient();
 
   // 1. Procura pela organização oficial da rede
   const { data: networkOrg } = await supabase
     .from("organizations")
     .select("id")
     .ilike("trade_name", "%Rede Credenciada Geral%")
+    .eq("status", "active")
     .limit(1)
     .maybeSingle();
 
@@ -61,38 +62,7 @@ async function getOrCreateNetworkOrganizationId(): Promise<string> {
 
   if (activeOrg?.id) return activeOrg.id;
 
-  // 3. Procura qualquer organização existente
-  const { data: anyOrg } = await supabase
-    .from("organizations")
-    .select("id")
-    .limit(1)
-    .maybeSingle();
-
-  if (anyOrg?.id) return anyOrg.id;
-
-  // 4. Cria a organização matriz da rede Grupo J
-  const { createHmac } = await import("crypto");
-  const pepper = process.env.CPF_BLIND_INDEX_PEPPER || "grupoj-default-pepper-2026";
-  const blindIndex = createHmac("sha256", pepper).update("cnpj:00000000000191").digest("hex");
-
-  const { data: created, error } = await supabase
-    .from("organizations")
-    .insert({
-      legal_name: "Grupo J Benefícios e Serviços Automotivos Ltda",
-      trade_name: "Rede Credenciada Geral",
-      cnpj_masked: "00.000.000/0001-91",
-      cnpj_blind_index: blindIndex,
-      status: "active",
-      email: "contato@grupoj.com.br",
-      phone: "(11) 99999-9999"
-    })
-    .select("id")
-    .single();
-
-  if (error || !created) {
-    throw new Error(`Falha ao registrar organização da rede: ${error?.message}`);
-  }
-  return created.id;
+  throw new Error("Cadastre e aprove a organização responsável antes de publicar uma campanha da rede.");
 }
 
 // ---------------------------------------------------------------------------
@@ -123,7 +93,7 @@ export async function createNetworkPromotion(input: {
       validatedImageUrl = input.imageUrl.trim();
     }
 
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedAdminClient();
     let workshopId: string | null = null;
 
     const trimmedName = (input.workshopName || "").trim();
@@ -148,7 +118,7 @@ export async function createNetworkPromotion(input: {
 
     // Se for campanha geral da rede ou não encontrar oficina específica, ancora na organização da Rede
     if (!workshopId) {
-      workshopId = await getOrCreateNetworkOrganizationId();
+      workshopId = await getNetworkOrganizationId();
     }
 
     // Datas customizadas ou padrão (hoje + 30 dias)
@@ -209,7 +179,7 @@ export async function updatePromotion(
   }
 ) {
   try {
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedAdminClient();
 
     const updatePayload: Record<string, any> = {
       updated_at: new Date().toISOString()
@@ -277,7 +247,7 @@ export async function updatePromotion(
 
 export async function deletePromotion(promotionId: string) {
   try {
-    const supabase = createAdminServerClient();
+    const supabase = await createAuthorizedAdminClient();
 
     const { error } = await supabase
       .from("promotions")

@@ -43,7 +43,7 @@ export default function CheckInPage() {
     <div className="space-y-6 max-w-4xl mx-auto text-left">
       <PageHeader
         title="Validação de Voucher & Check-in"
-        subtitle="Consulte o código gerado no aplicativo do motorista ou a placa do veículo para liberar o atendimento preventivo."
+        subtitle="Informe o código gerado no aplicativo do motorista. A placa e a quilometragem complementam a conferência."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -58,7 +58,7 @@ export default function CheckInPage() {
                 <div>
                   <CardTitle>Entrada de Box / Validação</CardTitle>
                   <CardDescription>
-                    Insira o voucher de 6 a 8 dígitos ou a placa do veículo.
+                    Cole o código completo de 32 caracteres exibido no aplicativo.
                   </CardDescription>
                 </div>
               </div>
@@ -71,7 +71,7 @@ export default function CheckInPage() {
                     Código do Voucher (Apresentado pelo Cliente)
                   </label>
                   <Input
-                    placeholder="Ex: GJ-94021"
+                    placeholder="Código completo do voucher"
                     value={voucherToken}
                     onChange={(e) => setVoucherToken(e.target.value.toUpperCase())}
                     className="font-mono text-base uppercase tracking-widest"
@@ -143,7 +143,7 @@ export default function CheckInPage() {
 
               <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-slate-100 pt-4">
                 <span className="text-xs text-slate-500 text-center sm:text-left">
-                  Liquidação do repasse em até 2 dias úteis
+                  Condições de repasse ainda não definidas
                 </span>
                 <Button
                   type="submit"
@@ -188,7 +188,7 @@ export default function CheckInPage() {
                 <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
                   4
                 </span>
-                <p>O repasse financeiro do serviço será lançado automaticamente no seu extrato.</p>
+                <p>O atendimento foi registrado. Isso não confirma um repasse financeiro.</p>
               </div>
             </CardContent>
           </Card>
@@ -198,7 +198,7 @@ export default function CheckInPage() {
             <div>
               <p className="font-bold text-slate-800">Garantia Grupo J</p>
               <p className="text-[11px] text-slate-500">
-                Todo atendimento validado possui repasse garantido pelo Grupo J.
+                Consulte a administração sobre as condições financeiras dos atendimentos.
               </p>
             </div>
           </div>

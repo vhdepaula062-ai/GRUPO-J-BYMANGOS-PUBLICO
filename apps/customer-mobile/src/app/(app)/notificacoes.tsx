@@ -1,28 +1,15 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { tokens } from "@grupo-j/design-tokens";
-
-export default function NotificacoesScreen() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Notificações</Text>
-          <Text style={styles.subtitle}>Avisos sobre seu plano, benefícios e manutenções</Text>
-        </View>
-
-        <Text style={styles.notifDesc}>Nenhuma notificação registrada.</Text>
-      </ScrollView>
-    </SafeAreaView>
-  );
+import React,{useCallback,useState} from "react";
+import {Text,ScrollView,ActivityIndicator,Alert} from "react-native";
+import {SafeAreaView} from "react-native-safe-area-context";
+import {MobileCard,MobileButton} from "@grupo-j/ui-mobile";
+import {useRouter} from "expo-router";
+import {api} from "../../lib/api";
+import {useApiResource} from "../../hooks/useApiResource";
+type Item={id:string;title:string;message:string;entity_type:string;created_at:string;read_at:string|null};
+export default function Notifications(){
+ const router=useRouter();const [cursor,setCursor]=useState<string|null>(null);
+ const load=useCallback(()=>api.get<{items:Item[];next:string|null}>("/api/v1/notifications"+(cursor?`?before=${encodeURIComponent(cursor)}`:"")),[cursor]);
+ const {data,loading,error,reload}=useApiResource(load);
+ async function open(n:Item){try{await api.patch("/api/v1/notifications",{id:n.id});await reload();const target=n.entity_type==="portal_requests"?"/(app)/atendimento":n.entity_type==="service_orders"?"/(app)/historico":n.entity_type==="benefit_redemptions"?"/(app)/beneficios":"/(app)/perfil";router.push(target);}catch{Alert.alert("Não foi possível abrir","Tente novamente.");}}
+ return <SafeAreaView style={{flex:1,backgroundColor:"#f8fafc"}}><ScrollView contentContainerStyle={{padding:20,gap:14}}><Text style={{fontSize:24,fontWeight:"700"}}>Notificações</Text><Text>Atualização automática enquanto esta tela estiver aberta.</Text>{loading&&<ActivityIndicator/>}{error&&<Text accessibilityRole="alert">{error}</Text>}{data?.items.length===0&&!error&&<Text>Nenhuma notificação registrada.</Text>}{data?.items.map(n=><MobileCard key={n.id}><Text style={{fontWeight:"700"}}>{!n.read_at?"● ":""}{n.title}</Text><Text>{n.message}</Text><Text>{new Date(n.created_at).toLocaleString("pt-BR")}</Text><MobileButton label="Ver detalhes" variant="outline" onPress={()=>open(n)}/></MobileCard>)}{data?.next&&<MobileButton label="Avisos anteriores" onPress={()=>setCursor(data.next)}/>}<MobileButton label="Mais recentes" variant="outline" onPress={()=>{setCursor(null);void reload();}}/></ScrollView></SafeAreaView>;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: tokens.colors.surface.subtle },
-  scroll: { padding: 20 },
-  header: { marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: "800", color: tokens.colors.text.primary },
-  subtitle: { fontSize: 13, color: tokens.colors.text.secondary, marginTop: 2 },
-  notifDesc: { fontSize: 13, color: tokens.colors.text.secondary, marginTop: 4, lineHeight: 18 },
-});

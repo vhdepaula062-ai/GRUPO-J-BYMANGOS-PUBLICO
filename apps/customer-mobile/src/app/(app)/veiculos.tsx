@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MobileCard, MobileBadge, MobileButton, MobileInput } from "@grupo-j/ui-mobile";
+import { MobileCard, MobileButton, MobileInput } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
 import { api } from "../../lib/api";
 import { useApiResource } from "../../hooks/useApiResource";
@@ -11,13 +11,19 @@ type Vehicle = { id: string; plate: string; brand: string; model: string; model_
 export default function VeiculosScreen() {
   const load = useCallback(() => api.getVehicles<Vehicle[]>(), []);
   const { data: vehicles, loading, error, reload } = useApiResource(load);
+  const [editing,setEditing]=useState<string|null>(null);
+  const [busy,setBusy]=useState(false);
+  const [manufacture,setManufacture]=useState("");
   const [showForm, setShowForm] = useState(false);
   const [plate, setPlate] = useState(""); const [brand, setBrand] = useState(""); const [model, setModel] = useState(""); const [year, setYear] = useState(""); const [color, setColor] = useState("");
   const saveVehicle = async () => {
+    setBusy(true);
     try {
-      await api.createVehicle({ plate, brand, model, modelYear: Number(year), manufactureYear: Number(year), color });
+      const values={brand,model,modelYear:Number(year),manufactureYear:Number(manufacture||year),color};
+      if(editing)await api.updateVehicle(editing,values);else await api.createVehicle({plate,...values});
+      setEditing(null);setManufacture("");
       setShowForm(false); setPlate(""); setBrand(""); setModel(""); setYear(""); setColor(""); await reload();
-    } catch (cause) { Alert.alert("Veículo não cadastrado", cause instanceof Error ? cause.message : "Confira os dados."); }
+    } catch (cause) { Alert.alert("Veículo não cadastrado", cause instanceof Error ? cause.message : "Confira os dados."); }finally{setBusy(false);}
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -27,26 +33,27 @@ export default function VeiculosScreen() {
             <Text style={styles.title}>Meus Veículos</Text>
             <Text style={styles.subtitle}>Frota cadastrada na sua assinatura Grupo J.</Text>
           </View>
-          <MobileButton label={showForm ? "Cancelar" : "+ Adicionar"} size="sm" variant="primary" onPress={() => setShowForm((value) => !value)} />
+          <MobileButton label={showForm ? "Cancelar" : "+ Adicionar"} size="sm" variant="primary" onPress={() => {setEditing(null);setPlate("");setBrand("");setModel("");setYear("");setManufacture("");setColor("");setShowForm((value)=>!value);}} />
         </View>
         {showForm ? <MobileCard>
-          <MobileInput label="Placa" value={plate} onChangeText={setPlate} autoCapitalize="characters" placeholder="ABC1D23" />
+          <MobileInput editable={!editing} label="Placa" value={plate} onChangeText={setPlate} autoCapitalize="characters" placeholder="ABC1D23" />
           <MobileInput label="Marca" value={brand} onChangeText={setBrand} placeholder="Volkswagen" />
           <MobileInput label="Modelo" value={model} onChangeText={setModel} placeholder="Gol" />
           <MobileInput label="Ano" value={year} onChangeText={setYear} keyboardType="numeric" placeholder="2024" />
+          <MobileInput label="Ano de fabricação" value={manufacture} onChangeText={setManufacture} keyboardType="numeric"/>
           <MobileInput label="Cor" value={color} onChangeText={setColor} placeholder="Prata" />
-          <MobileButton label="Salvar veículo" variant="primary" onPress={() => void saveVehicle()} />
+          <MobileButton label="Salvar veículo" isLoading={busy} variant="primary" onPress={() => void saveVehicle()} />
         </MobileCard> : null}
         {loading ? <ActivityIndicator /> : null}
         {error ? <Text style={{ color: tokens.colors.status.danger }}>{error}</Text> : null}
         {!loading && !error && vehicles?.length === 0 ? <Text style={styles.subtitle}>Nenhum veículo cadastrado.</Text> : null}
-        {(vehicles ?? []).map((vehicle, index) => <MobileCard key={vehicle.id}>
+        {(vehicles ?? []).map((vehicle) => <MobileCard key={vehicle.id}>
           <View style={styles.vehicleHeader}>
             <View>
               <Text style={styles.plateText}>{vehicle.plate}</Text>
               <Text style={styles.modelText}>{vehicle.brand} {vehicle.model}</Text>
             </View>
-            {index === 0 ? <MobileBadge label="Principal" variant="success" /> : null}
+
           </View>
 
           <View style={styles.detailsRow}>
@@ -54,6 +61,8 @@ export default function VeiculosScreen() {
             <Text style={styles.detailItem}>Cor: {vehicle.color}</Text>
             <Text style={styles.detailItem}>Renavam: {vehicle.renavam_masked ?? "Não informado"}</Text>
           </View>
+          <MobileButton label="Editar" variant="outline" onPress={()=>{setEditing(vehicle.id);setPlate(vehicle.plate);setBrand(vehicle.brand);setModel(vehicle.model);setYear(String(vehicle.model_year));setManufacture(String(vehicle.manufacture_year));setColor(vehicle.color);setShowForm(true);}}/>
+          <MobileButton label="Desativar veículo" variant="outline" onPress={()=>Alert.alert("Desativar veículo","O histórico será preservado. Este veículo não poderá emitir novos vouchers.",[{text:"Voltar",style:"cancel"},{text:"Desativar",onPress:async()=>{try{await api.updateVehicle(vehicle.id,{isActive:false});await reload();}catch(e){Alert.alert("Não foi possível desativar",e instanceof Error?e.message:"Tente novamente.");}}}])}/>
         </MobileCard>)}
       </ScrollView>
     </SafeAreaView>

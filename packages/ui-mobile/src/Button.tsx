@@ -120,7 +120,9 @@ const styles = StyleSheet.create({
   },
   textBase: {
     fontWeight: "600",
-    fontSize: 15
+    fontSize: 15,
+    flexShrink: 1,
+    textAlign: "center"
   },
   primaryText: {
     color: "#FFFFFF"

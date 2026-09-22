@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminServerClient } from "@/lib/supabase/admin";
+import { createAuthorizedAdminClient } from "@/lib/supabase/authorized";
 import { revalidatePath } from "next/cache";
 
 // ---------------------------------------------------------------------------
@@ -15,7 +15,7 @@ export async function createBenefitDefinition(formData: {
   quantityPerCycle: number;
   gracePeriodDays: number;
 }) {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   const { error } = await supabase.from("benefit_definitions").insert({
     name: formData.name,
@@ -41,7 +41,7 @@ export async function createBenefitDefinition(formData: {
 // ---------------------------------------------------------------------------
 
 export async function toggleBenefitStatus(id: string, isActive: boolean) {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   const { error } = await supabase
     .from("benefit_definitions")
@@ -72,7 +72,7 @@ export async function updateBenefitDefinition(
     gracePeriodDays?: number;
   }
 ) {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   const updatePayload: Record<string, any> = {};
   if (formData.name !== undefined) updatePayload.name = formData.name;
@@ -101,7 +101,7 @@ export async function updateBenefitDefinition(
 // ---------------------------------------------------------------------------
 
 export async function deleteBenefitDefinition(id: string) {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   const { error } = await supabase
     .from("benefit_definitions")

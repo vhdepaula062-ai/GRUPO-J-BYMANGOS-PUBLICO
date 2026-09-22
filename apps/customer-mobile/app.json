@@ -2,7 +2,7 @@
   "expo": {
     "name": "Grupo J",
     "slug": "grupo-j-customer",
-    "version": "0.1.0",
+    "version": "0.2.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "grupoj",
@@ -14,22 +14,22 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "br.com.grupoj.autocenter.staging",
-      "infoPlist": {
-        "NSCameraUsageDescription": "O Grupo J necessita de acesso à câmera para fotografar o hodômetro e placa do veículo no check-in.",
-        "NSLocationWhenInUseUsageDescription": "Sua localização é utilizada exclusivamente para exibir os centros automotivos credenciados mais próximos de você."
-      }
+      "bundleIdentifier": "br.com.grupoj.autocenter.staging"
     },
     "android": {
       "package": "br.com.grupoj.autocenter.staging",
-      "versionCode": 1,
+      "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#00091D"
+        "backgroundColor": "#034EFE"
       },
-      "permissions": [
+      "permissions": [],
+      "blockedPermissions": [
         "android.permission.CAMERA",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ]
     },
     "plugins": [
@@ -41,8 +41,7 @@
     "extra": {
       "environment": "staging",
       "apiUrl": "https://grupo-j-api.vercel.app",
-      "paymentMode": "sandbox",
-      "planMonthlyPrice": 50.00
+      "paymentMode": "unconfigured"
     }
   }
 }

@@ -51,7 +51,7 @@ export function PrivacidadeClient({ initialRequests }: Props) {
       const res = await approveErasureRequestAction(selectedForApproval.id, selectedForApproval.user_id);
       if (res.success) {
         setRequests((prev) =>
-          prev.map((r) => (r.id === selectedForApproval.id ? { ...r, status: "completed" } : r))
+          prev.map((r) => (r.id === selectedForApproval.id ? { ...r, status: "identity_check" } : r))
         );
         setFeedback({
           type: "success",
@@ -251,7 +251,7 @@ export function PrivacidadeClient({ initialRequests }: Props) {
                               leftIcon={<Trash2 size={12} />}
                               onClick={() => setSelectedForApproval(item)}
                             >
-                              Aprovar & Excluir
+                              Analisar pedido
                             </Button>
                           </>
                         ) : (
@@ -276,7 +276,7 @@ export function PrivacidadeClient({ initialRequests }: Props) {
         <Modal
           isOpen={Boolean(selectedForApproval)}
           onClose={() => !isProcessing && setSelectedForApproval(null)}
-          title="Aprovar e Executar Exclusão LGPD"
+          title="Analisar identidade e retenção"
           description="Atendimento ao direito de eliminação de dados (Art. 18, VI da LGPD)"
           size="md"
           footer={
@@ -305,8 +305,8 @@ export function PrivacidadeClient({ initialRequests }: Props) {
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3 text-rose-900">
               <AlertTriangle size={20} className="text-rose-600 shrink-0 mt-0.5" />
               <div className="text-xs leading-relaxed">
-                <p className="font-bold text-rose-950 mb-1">Confirmação de expurgo definitivo:</p>
-                A aprovação deste pedido apagará completamente a conta de login, faturas, veículos, assinaturas e todo o histórico do titular{" "}
+                <p className="font-bold text-rose-950 mb-1">Análise prévia obrigatória:</p>
+                Este pedido será encaminhado para confirmação de identidade e análise de retenção. Nenhum dado será apagado nesta etapa. Titular:{" "}
                 <strong>{selectedForApproval.titular_name}</strong> ({selectedForApproval.titular_email}).
               </div>
             </div>

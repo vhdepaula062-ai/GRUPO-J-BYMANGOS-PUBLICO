@@ -1,3 +1,5 @@
+import {ActionForm} from "@grupo-j/ui-web";
+import {cancelSubscription} from "./actions";
 import { Badge, Card, CardContent, CardHeader, CardTitle, PageHeader } from "@grupo-j/ui-web";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getMyWorkshop } from "@/lib/queries";
@@ -5,6 +7,8 @@ import { getMyWorkshop } from "@/lib/queries";
 type SubscriptionData = {
   id: string;
   status: string;
+  cancel_at_period_end:boolean;
+  trial_end: string | null;
   current_period_end: string;
   plan: { name: string; price_cents: number } | null;
 };
@@ -14,18 +18,26 @@ export default async function MensalidadeOficinaPage() {
   const organizationId = workshop?.organization?.id as string | undefined;
   let subscription: SubscriptionData | null = null;
   let loadError = false;
+  let paymentError = false;
+  let payments: Array<{ id: string; amount_cents: number; currency: string; status: string; created_at: string }> = [];
 
   if (organizationId) {
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
     const result = await supabase
       .from("subscriptions")
-      .select("id, status, current_period_end, plan:plans(name, price_cents)")
+      .select("id, status, cancel_at_period_end, trial_end, current_period_end, plan:plans(name, price_cents)")
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     loadError = Boolean(result.error);
     subscription = result.data as unknown as SubscriptionData | null;
+    const paymentResult = await supabase.from("payments")
+      .select("id, amount_cents, currency, status, created_at, subscription:subscriptions!inner(organization_id)")
+      .eq("subscription.organization_id", organizationId)
+      .order("created_at", { ascending: false }).limit(50);
+    paymentError = Boolean(paymentResult.error);
+    payments = paymentResult.data ?? [];
   }
 
   const amount = subscription?.plan
@@ -54,7 +66,7 @@ export default async function MensalidadeOficinaPage() {
           <CardTitle>{subscription?.plan?.name ?? "Plano de oficina"}</CardTitle>
           {subscription && (
             <Badge variant={subscription.status === "active" ? "success" : "warning"}>
-              {statusLabels[subscription.status] ?? subscription.status}
+              {new Date(subscription.current_period_end).getTime()<=Date.now()?"Vigência encerrada":subscription.trial_end && new Date(subscription.trial_end).getTime() > Date.now() ? "Teste sem cobrança" : statusLabels[subscription.status] ?? subscription.status}
             </Badge>
           )}
         </CardHeader>
@@ -66,7 +78,7 @@ export default async function MensalidadeOficinaPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="rounded-xl border border-slate-200 p-4">
-                <span className="text-xs text-slate-500">Mensalidade</span>
+                <span className="text-xs text-slate-500">Preço de catálogo (não comprova pagamento)</span>
                 <p className="text-xl font-black text-slate-900">{amount}</p>
               </div>
               <div className="rounded-xl border border-slate-200 p-4">
@@ -75,9 +87,20 @@ export default async function MensalidadeOficinaPage() {
               </div>
             </div>
           )}
+          {subscription&&(subscription.cancel_at_period_end?<p>Renovação desativada. Acesso até {dueDate}.</p>:["owner","manager"].includes(workshop?.role??"")&&<ActionForm action={cancelSubscription} submitLabel="Cancelar ao fim da vigência"><input name="id" type="hidden" value={subscription.id}/></ActionForm>)}
           <p className="text-xs text-slate-500">
             A emissão de Pix, troca de cartão e comprovantes será liberada após a homologação do gateway de pagamentos contratado.
           </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>Pagamentos da oficina — últimos 50 registros</CardTitle></CardHeader>
+        <CardContent>
+          {paymentError ? <p role="alert">Não foi possível consultar os pagamentos.</p> : payments.length === 0 ? <p>Nenhum pagamento registrado para esta oficina.</p> : payments.map(payment => <div key={payment.id} className="flex justify-between gap-4 py-3 border-b border-slate-100">
+            <span>{new Date(payment.created_at).toLocaleDateString("pt-BR")}</span>
+            <span>{(payment.amount_cents / 100).toLocaleString("pt-BR", { style: "currency", currency: payment.currency })}</span>
+            <span>{({ paid: "Pago", pending: "Pendente", authorized: "Autorizado", refunded: "Estornado", charged_back: "Contestado", failed: "Falhou" } as Record<string, string>)[payment.status] ?? payment.status}</span>
+          </div>)}
         </CardContent>
       </Card>
     </div>

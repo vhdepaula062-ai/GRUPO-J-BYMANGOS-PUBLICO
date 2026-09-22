@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { BrandLogo } from "../../components/BrandLogo";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MobileButton, MobileInput } from "@grupo-j/ui-mobile";
 import { tokens } from "@grupo-j/design-tokens";
@@ -9,7 +10,8 @@ import { useAuth } from "../../providers/AuthProvider";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const params = useLocalSearchParams<{email?:string}>();
+  const [email, setEmail] = useState(typeof params.email === "string" ? params.email : "");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,10 +32,9 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={{flexGrow:1,justifyContent:"space-between",gap:24}} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoText}>J</Text>
-        </View>
+        <BrandLogo />
         <Text style={styles.title}>Bem-vindo de volta</Text>
         <Text style={styles.subtitle}>Entre para acessar sua assinatura e seus benefícios automotivos.</Text>
       </View>
@@ -55,6 +56,7 @@ export default function LoginScreen() {
           onChangeText={setPassword}
         />
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <TouchableOpacity onPress={() => router.push({pathname:"/(auth)/verificacao",params:{email}})}><Text style={styles.forgotPasswordText}>Preciso confirmar meu e-mail</Text></TouchableOpacity>
 
         <TouchableOpacity
           style={styles.forgotPassword}
@@ -74,7 +76,7 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.planPrice}>Plano Motorista • R$ 50,00/mês</Text>
+        <Text style={styles.planPrice}>Grupo J • Acesso do motorista</Text>
         <View style={styles.signupRow}>
           <Text style={styles.footerText}>Ainda não é assinante? </Text>
           <TouchableOpacity onPress={() => router.push("/(auth)/cadastro")}>
@@ -82,6 +84,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

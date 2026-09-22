@@ -1,9 +1,11 @@
+import { maskCompanyDocument, safeSearchTerm } from "@grupo-j/domain";
 /**
  * @grupo-j/admin-web — Queries do Supabase para o painel administrativo
  * Todas as funções retornam exclusivamente dados persistidos no banco.
  */
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { createAdminServerClient } from "@/lib/supabase/admin";
+import { createAuthorizedAdminClient } from "@/lib/supabase/authorized";
+import { getFinancialSnapshot, readFinancialRows } from "@/lib/financial-data";
 
 export async function withQueryTimeout<T>(promise: Promise<T>, fallback: T, ms = 2500): Promise<T> {
   let timer: NodeJS.Timeout;
@@ -36,14 +38,14 @@ export interface DashboardKpis {
 export async function getDashboardKpis(): Promise<DashboardKpis> {
   // Admin client garante que counts de organizações (incl. pending_approval)
   // e promoções moderadas não sejam filtrados pelo RLS do usuário logado.
-  const supabase = createAdminServerClient();
-  return withQueryTimeout((async () => {
+  const supabase = await createAuthorizedAdminClient();
+  return (async () => {
       const [
-        { count: motoristas },
-        { count: workshops },
-        { count: checkIns },
-        { count: moderation },
-        { count: pendingWorkshops }
+        { count: motoristas, error: motoristasError },
+        { count: workshops, error: workshopsError },
+        { count: checkIns, error: checkInsError },
+        { count: moderation, error: moderationError },
+        { count: pendingWorkshops, error: pendingError }
       ] = await Promise.all([
         supabase.from("customers").select("*", { count: "exact", head: true }),
         supabase.from("organizations").select("*", { count: "exact", head: true }).eq("status", "active"),
@@ -56,9 +58,17 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
         supabase.from("organizations").select("*", { count: "exact", head: true }).eq("status", "pending_approval")
       ]);
 
+      if (motoristasError || workshopsError || checkInsError || moderationError || pendingError) {
+        throw new Error("Não foi possível confirmar os indicadores da plataforma");
+      }
       const activeMotoristasCount = motoristas ?? 0;
       const activeWorkshopsCount = workshops ?? 0;
-      const mrr = activeMotoristasCount * 5000 + activeWorkshopsCount * 50000;
+      const subscriptions = await readFinancialRows("subscriptions", "id, status, trial_end, current_period_start, current_period_end, plan:plans(price_cents, currency, billing_interval_months)");
+      const now = Date.now();
+      const mrr = Math.round(subscriptions.filter(s => s.status === "active" && new Date(s.current_period_start).getTime() <= now && new Date(s.current_period_end).getTime() > now && (!s.trial_end || new Date(s.trial_end).getTime() <= now)).reduce((total, s) => {
+        if (!s.plan || s.plan.currency !== "BRL" || s.plan.billing_interval_months < 1) throw new Error("Plano financeiro inválido");
+        return total + s.plan.price_cents / s.plan.billing_interval_months;
+      }, 0));
       const monthlyCheckIns = checkIns ?? 0;
       const pendingModerationCount = moderation ?? 0;
       const pendingWorkshopsCount = pendingWorkshops ?? 0;
@@ -71,7 +81,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
         pendingModerationCount,
         pendingWorkshopsCount
       };
-    })(), { activeMotoristasCount: 0, activeWorkshopsCount: 0, mrr: 0, monthlyCheckIns: 0, pendingModerationCount: 0, pendingWorkshopsCount: 0 }, 5000);
+    })();
 }
 
 
@@ -93,9 +103,10 @@ export interface WorkshopRow {
 }
 
 export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
+  search = search ? safeSearchTerm(search) : undefined;
   // IMPORTANTE: usa admin client para bypassar RLS e ver TODAS as oficinas,
   // inclusive as com status "pending_approval" que chegam pelo cadastro externo.
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   let query = supabase
     .from("organizations")
@@ -121,7 +132,7 @@ export async function getWorkshops(search?: string): Promise<WorkshopRow[]> {
       id: row.id,
       trade_name: row.trade_name,
       legal_name: row.legal_name,
-      cnpj_masked: row.cnpj_masked,
+      cnpj_masked: maskCompanyDocument(row.cnpj_masked),
       email: row.email,
       phone: row.phone,
       status: row.status,
@@ -159,7 +170,7 @@ export interface MotoristRow {
 }
 
 export async function getMotoristas(search?: string): Promise<MotoristRow[]> {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   const { data, error } = await supabase
     .from("customers")
@@ -170,7 +181,7 @@ export async function getMotoristas(search?: string): Promise<MotoristRow[]> {
       created_at,
       assigned_workshop_id,
       profile:profiles(id, full_name, email, phone, cpf_masked, created_at),
-      subscriptions(id, status, current_period_end)
+      subscriptions(id, status, created_at, trial_end, current_period_end)
     `
     )
     .order("created_at", { ascending: false })
@@ -183,7 +194,7 @@ export async function getMotoristas(search?: string): Promise<MotoristRow[]> {
 
   const rows: MotoristRow[] = (data ?? []).map((c: any) => {
     const prof = c.profile;
-    const sub = c.subscriptions?.[0];
+    const sub = c.subscriptions?.slice().sort((a: any, b: any) => b.created_at.localeCompare(a.created_at))[0];
     return {
       id: c.id,
       profile_id: c.profile_id || prof?.id || undefined,
@@ -192,7 +203,7 @@ export async function getMotoristas(search?: string): Promise<MotoristRow[]> {
       phone: prof?.phone || null,
       cpf_masked: prof?.cpf_masked || "***.***.***-**",
       created_at: c.created_at || prof?.created_at || new Date().toISOString(),
-      subscription_status: sub?.status === "active" ? "active" : "Pendente"
+      subscription_status: !sub ? "none" : sub.status === "active" && new Date(sub.current_period_end).getTime() <= Date.now() ? "expired" : sub.status === "active" && sub.trial_end && new Date(sub.trial_end).getTime() > Date.now() ? "trial" : sub.status
     };
   });
 
@@ -225,34 +236,14 @@ export interface SubscriptionRow {
 }
 
 export async function getSubscriptions(): Promise<SubscriptionRow[]> {
-  const supabase = createAdminServerClient();
-
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select(
-      `
-      id, status, current_period_end, created_at,
-      plan:plans(name, price_cents),
-      customer:customers(profile:profiles(full_name, email))
-    `
-    )
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (error) {
-    console.error("[getSubscriptions]", error.message);
-    return [];
-  }
-
-  return (data ?? []).map((s: Record<string, unknown>) => ({
-    id: s.id as string,
-    status: s.status as string,
-    billing_cycle: "monthly",
-    current_period_end: s.current_period_end as string,
-    created_at: s.created_at as string,
-    plan_name: (s.plan as Record<string, unknown>)?.name as string ?? "Plano Básico",
-    amount_cents: (s.plan as Record<string, unknown>)?.price_cents as number ?? 0
-  }));
+  const rows = await readFinancialRows("subscriptions", "id, status, trial_end, current_period_end, created_at, plan:plans(name, price_cents, billing_interval_months), customer:customers(profile:profiles(full_name, email)), organization:organizations(trade_name, email)");
+  return rows.map(s => ({
+    id: s.id, status: s.trial_end && new Date(s.trial_end).getTime() > Date.now() ? "trial" : s.status,
+    billing_cycle: String(s.plan?.billing_interval_months ?? "—") + " mês(es)",
+    current_period_end: s.current_period_end, created_at: s.created_at,
+    plan_name: s.plan?.name ?? "Plano indisponível", amount_cents: s.plan?.price_cents ?? 0,
+    profile: s.organization ? { full_name: s.organization.trade_name, email: s.organization.email } : s.customer?.profile
+  })).sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 // ----------------------------------------------------------------------------
@@ -270,121 +261,7 @@ export interface TransactionRow {
 }
 
 export async function getTransactions(): Promise<TransactionRow[]> {
-  const supabase = createAdminServerClient();
-
-  const [paymentsRes, redemptionsRes, subsRes, customersRes] = await Promise.all([
-    supabase
-      .from("payments")
-      .select("id, created_at, amount_cents, status, gateway_payment_id, payment_method_type")
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("benefit_redemptions")
-      .select(`
-        id, created_at, validated_at, status, voucher_token,
-        benefit:benefit_definitions(name),
-        customer:customers(profile:profiles(full_name)),
-        workshop:organizations(trade_name)
-      `)
-      .in("status", ["validated", "completed", "requested"])
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("subscriptions")
-      .select(`
-        id, created_at, status,
-        plan:plans(name, price_cents),
-        customer:customers(profile:profiles(full_name))
-      `)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("customers")
-      .select(`
-        id, created_at,
-        profile:profiles(full_name)
-      `)
-      .order("created_at", { ascending: false })
-      .limit(50)
-  ]);
-
-  const transactions: TransactionRow[] = [];
-
-  // 1. Pagamentos processados pelo gateway
-  if (paymentsRes.data) {
-    for (const payment of paymentsRes.data) {
-      transactions.push({
-        id: payment.id,
-        created_at: payment.created_at,
-        amount_cents: payment.amount_cents,
-        type: payment.payment_method_type || "pix",
-        status: payment.status || "paid",
-        description: "Cobrança de assinatura",
-        reference_id: payment.gateway_payment_id ?? payment.id
-      });
-    }
-  }
-
-  // 2. Assinaturas de motoristas registradas no ecossistema
-  if (subsRes.data) {
-    for (const s of subsRes.data as any[]) {
-      const customerName = s.customer?.profile?.full_name ?? "Motorista";
-      const planName = s.plan?.name ?? "Plano Preventivo";
-      const priceCents = s.plan?.price_cents ?? 5000;
-      transactions.push({
-        id: `sub-${s.id}`,
-        created_at: s.created_at,
-        amount_cents: priceCents,
-        type: "assinatura_motorista",
-        status: s.status === "active" ? "paid" : s.status,
-        description: `Assinatura: ${planName} — ${customerName}`,
-        reference_id: s.id
-      });
-    }
-  }
-
-  // Se houver clientes cadastrados no aplicativo que ainda não têm linha em subscriptions/payments,
-  // reflete a assinatura mensal de R$ 50,00 como entrada do ecossistema
-  if (customersRes.data && transactions.length === 0) {
-    for (const c of customersRes.data as any[]) {
-      const customerName = c.profile?.full_name ?? "Motorista Cadastrado";
-      transactions.push({
-        id: `cust-sub-${c.id}`,
-        created_at: c.created_at,
-        amount_cents: 5000,
-        type: "assinatura_motorista",
-        status: "paid",
-        description: `Assinatura: Plano Preventivo — ${customerName}`,
-        reference_id: `CLI-${c.id.slice(0, 8).toUpperCase()}`
-      });
-    }
-  }
-
-  // 3. Repasses operacionais para as oficinas credenciadas (vouchers validados/executados)
-  if (redemptionsRes.data) {
-    for (const r of redemptionsRes.data as any[]) {
-      const isValidated = r.status === "validated" || r.status === "completed";
-      const customerName = r.customer?.profile?.full_name ?? "Motorista";
-      const serviceName = r.benefit?.name ?? "Atendimento Preventivo";
-      const workshopName = r.workshop?.trade_name ?? "Oficina Credenciada";
-      const token = r.voucher_token || r.id.slice(0, 8).toUpperCase();
-
-      transactions.push({
-        id: `rep-${r.id}`,
-        created_at: r.validated_at || r.created_at,
-        amount_cents: -5000, // Repasse exato de R$ 50,00 para a oficina
-        type: "workshop_reimbursement",
-        status: isValidated ? "completed" : "pending",
-        description: `Repasse: ${serviceName} — ${customerName} (${workshopName})`,
-        reference_id: token
-      });
-    }
-  }
-
-  // Ordena por data decrescente
-  transactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-  return transactions;
+  return (await getFinancialSnapshot()).transactions;
 }
 
 // ----------------------------------------------------------------------------
@@ -405,7 +282,7 @@ export interface PromotionRow {
 }
 
 export async function getPendingPromotions(): Promise<PromotionRow[]> {
-  const supabase = createAdminServerClient();
+  const supabase = await createAuthorizedAdminClient();
 
   const { data, error } = await supabase
     .from("promotions")
@@ -457,7 +334,7 @@ export interface BenefitDefinitionRow {
 }
 
 export async function getBenefitDefinitions(): Promise<BenefitDefinitionRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("benefit_definitions")
     .select("*")
@@ -480,7 +357,7 @@ export interface CheckInRow {
 }
 
 export async function getRecentCheckIns(): Promise<CheckInRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("benefit_redemptions")
     .select(
@@ -523,7 +400,7 @@ export interface AuditLogRow {
 }
 
 export async function getAuditLogs(): Promise<AuditLogRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("audit_logs")
     .select("*")
@@ -556,7 +433,7 @@ export interface DsrRow {
 }
 
 export async function getDataSubjectRequests(): Promise<DsrRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("account_erasure_requests")
     .select("id, requested_at, status, deadline_at, notes")
@@ -579,7 +456,7 @@ export interface AdminUserRow {
 }
 
 export async function getAdminUsers(): Promise<AdminUserRow[]> {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("profiles")
     .select(

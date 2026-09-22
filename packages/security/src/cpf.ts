@@ -1,6 +1,10 @@
 import { createHmac, createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
 export class CpfSecurity {
+  public static assertProtectionKeys(key: string | undefined, pepper: string | undefined): void {
+    const safe = (value: string | undefined) => !!value && /^[0-9a-f]{64}$/i.test(value) && !/^(.{16})\1{3}$/.test(value);
+    if (!safe(key) || !safe(pepper) || key === pepper) throw new Error("Proteção de documentos indisponível: configure segredos exclusivos.");
+  }
   /**
    * Remove caracteres não numéricos.
    */

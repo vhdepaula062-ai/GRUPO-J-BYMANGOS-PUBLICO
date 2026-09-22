@@ -1,0 +1,4 @@
+import {readSettings,publicSettings} from "@grupo-j/database";
+import {createAdminServerClient} from "@/lib/supabase/admin";
+export const dynamic="force-dynamic";
+export default async function Legal(){const c=await readSettings(createAdminServerClient());const s=publicSettings(c.value);return <main className="max-w-3xl mx-auto p-8 space-y-6"><h1 className="text-3xl font-bold">Privacidade e termos</h1>{s.legalPublished?<><p>{s.controllerName} · {s.controllerDocument}</p><p>{s.privacyEmail}</p><h2 className="text-xl font-bold">Privacidade</h2><p className="whitespace-pre-wrap">{s.privacyText}</p><h2 className="text-xl font-bold">Termos de uso</h2><p className="whitespace-pre-wrap">{s.termsText}</p><p>Versão {c.version}</p></>:<p>A identificação oficial e os documentos estão em preparação. Pedidos de privacidade podem ser registrados e acompanhados na área de atendimento da conta.</p>}<a href="/login" className="underline">Voltar</a></main>;}

@@ -1,9 +1,10 @@
-const CACHE_NAME = "grupo-j-oficinas-v1.0.0";
+const CACHE_NAME = "grupo-j-oficinas-static-20260922-security";
 const OFFLINE_URL = "/offline.html";
 
 // Strictly non-sensitive static assets only
 const PRECACHE_ASSETS = [
-  "/",
+  "/brand/grupo-j-horizontal.png",
+  "/brand/grupo-j-profile.png",
   "/offline.html",
   "/manifest.json",
   "/icons/icon-192.png",
@@ -95,14 +96,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: Stale-while-revalidate
+  // Cache only known public, same-origin static paths.
   if (
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname.endsWith(".png") ||
-    url.pathname.endsWith(".woff2") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".js")
+    url.origin === self.location.origin && (
+      url.pathname.startsWith("/_next/static/") ||
+      url.pathname.startsWith("/icons/") ||
+      url.pathname.startsWith("/brand/")
+    )
   ) {
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {

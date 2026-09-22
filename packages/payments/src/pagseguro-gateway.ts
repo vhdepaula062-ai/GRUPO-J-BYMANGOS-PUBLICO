@@ -68,25 +68,7 @@ export class PagSeguroPaymentGateway implements PaymentGateway {
     return signature === expected;
   }
 
-  normalizeEvent(payload: Record<string, unknown>): NormalizedPaymentEvent {
-    const id = payload.id as string | undefined;
-    if (!id) throw new Error("Webhook PagSeguro sem identificador do evento.");
-    const status = (payload.status as string) || "";
-
-    let eventType: NormalizedPaymentEvent["eventType"] = "payment_approved";
-    if (status === "PAID" || status === "APPROVED" || status === "AUTHORIZED") {
-      eventType = "payment_approved";
-    } else if (status === "DECLINED" || status === "CANCELED") {
-      eventType = "payment_failed";
-    }
-
-    return {
-      eventId: id,
-      eventType,
-      gatewaySubscriptionId: (payload.subscription_id as string) || (payload.reference_id as string),
-      amountCents: typeof payload.amount === "number" ? payload.amount : undefined,
-      occurredAt: new Date().toISOString(),
-      rawPayload: payload
-    };
+  normalizeEvent(_payload: Record<string, unknown>): NormalizedPaymentEvent {
+    throw new Error("Normalização indisponível: o contrato de eventos do provedor ainda não foi homologado.");
   }
 }

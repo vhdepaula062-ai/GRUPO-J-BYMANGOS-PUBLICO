@@ -16,7 +16,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_WORKSHOP_URL: z.string().url().default("http://localhost:3001"),
 
   // Gateway de Pagamento
-  PAYMENT_GATEWAY_PROVIDER: z.enum(["fake", "mercadopago", "pagseguro"]).default("fake"),
+  PAYMENT_GATEWAY_PROVIDER: z.enum(["disabled", "fake", "mercadopago", "pagseguro"]).default("disabled"),
   MERCADO_PAGO_ACCESS_TOKEN: z.string().optional(),
   MERCADO_PAGO_WEBHOOK_SECRET: z.string().optional(),
   PAGSEGURO_TOKEN: z.string().optional(),
@@ -26,13 +26,13 @@ const envSchema = z.object({
   CPF_ENCRYPTION_KEY: z
     .string()
     .length(64, "CPF_ENCRYPTION_KEY deve ser uma chave hex de 32 bytes (64 caracteres)")
-    .default("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+    .regex(/^[0-9a-f]{64}$/i),
   CPF_BLIND_INDEX_PEPPER: z
     .string()
     .length(64, "CPF_BLIND_INDEX_PEPPER deve ser uma chave hex de 32 bytes (64 caracteres)")
-    .default("fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"),
+    .regex(/^[0-9a-f]{64}$/i),
 
-  SESSION_SECRET: z.string().min(32).default("minimo-32-caracteres-para-assinatura-de-sessao-segura-grupo-j")
+  SESSION_SECRET: z.string().min(32)
 }).superRefine((env, ctx) => {
   if (env.APP_ENV !== "production" && env.NODE_ENV !== "production") return;
 

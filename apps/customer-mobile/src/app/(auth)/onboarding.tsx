@@ -17,7 +17,7 @@ export default function OnboardingScreen() {
         <Text style={styles.title}>Seu carro sempre novo e seguro</Text>
         <Text style={styles.paragraph}>
           Tenha alinhamento (convergência), balanceamento, cristalização de para-brisa e revisões
-          preventivas em oficinas parceiras por apenas <Text style={styles.paragraphStrong}>R$ 50,00 por mês</Text>.
+          preventivas em oficinas parceiras conforme os benefícios do plano contratado.
         </Text>
       </View>
 

@@ -9,17 +9,18 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
-    "check:config": "expo doctor"
+    "check:config": "expo doctor",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@babel/runtime": "^7.26.0",
+    "@expo/vector-icons": "^14.0.4",
     "@grupo-j/api-client": "workspace:*",
     "@grupo-j/design-tokens": "workspace:*",
     "@grupo-j/domain": "workspace:*",
     "@grupo-j/types": "workspace:*",
     "@grupo-j/ui-mobile": "workspace:*",
     "@grupo-j/validation": "workspace:*",
-    "@expo/vector-icons": "^14.0.4",
-    "@babel/runtime": "^7.26.0",
     "expo": "~52.0.35",
     "expo-asset": "~11.0.3",
     "expo-constants": "~17.0.7",
@@ -39,6 +40,9 @@
     "@react-native/codegen": "0.76.7",
     "@react-native/gradle-plugin": "0.76.7",
     "@types/react": "~18.3.12",
-    "typescript": "^5.7.3"
+    "@types/react-test-renderer": "18.3.1",
+    "react-test-renderer": "18.3.1",
+    "typescript": "^5.7.3",
+    "vitest": "4.1.11"
   }
 }

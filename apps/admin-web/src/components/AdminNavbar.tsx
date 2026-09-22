@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { BreakGlassBanner, Button, LogOut, Bell, Menu, GrupoJLogo } from "@grupo-j/ui-web";
+import { NotificationCenter } from "./NotificationCenter";
+import { createClient } from "@/lib/supabase/client";
+import { BreakGlassBanner, Button, LogOut, Menu, GrupoJLogo } from "@grupo-j/ui-web";
 
 export const AdminNavbar: React.FC<{
   activeBreakGlass?: boolean;
@@ -38,7 +39,7 @@ export const AdminNavbar: React.FC<{
             <span className="font-semibold text-slate-800">Status da Rede:</span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Produção Homologada & Auditada
+              Operação Grupo J
             </span>
           </div>
         </div>
@@ -60,24 +61,19 @@ export const AdminNavbar: React.FC<{
             </Button>
           </a>
 
-          <button
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors relative"
-            aria-label="Notificações operacionais"
-          >
-            <Bell size={18} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#034EFE]" />
-          </button>
+          <NotificationCenter compact />
 
-          <Link href="/login">
+          <form onSubmit={async event => { event.preventDefault(); const { error } = await createClient().auth.signOut(); if (error) { window.alert("Não foi possível encerrar a sessão. Tente novamente."); return; } window.location.replace("/login"); }}>
             <Button
               variant="outline"
               size="sm"
               className="h-9 text-slate-600 font-medium"
+              type="submit"
               leftIcon={<LogOut size={14} />}
             >
               Sair
             </Button>
-          </Link>
+          </form>
         </div>
       </div>
     </header>
