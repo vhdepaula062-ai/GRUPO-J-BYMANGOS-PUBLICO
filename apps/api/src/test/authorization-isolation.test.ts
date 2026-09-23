@@ -1,7 +1,18 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
-import * as fs from "fs";
-import * as path from "path";
+
+// Keep invalid-token checks independent of local secrets and the identity service.
+vi.mock("@grupo-j/database", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@grupo-j/database")>()),
+  createRequestClient: () => ({
+    auth: {
+      getUser: async () => ({ data: { user: null }, error: { message: "Invalid token" } })
+    }
+  })
+}));
+
+vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://identity.example.test");
+vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
 
 // Rotas da API sob teste de autorização e isolamento
 import { GET as getBenefitsHandler, POST as createVoucherHandler } from "../app/api/v1/benefits/route";
@@ -14,20 +25,6 @@ import { GET as getMeHandler, DELETE as deleteMeHandler } from "../app/api/v1/me
 import { GET as getSessionHandler } from "../app/api/v1/auth/session/route";
 
 describe("ETAPA 1: AUTORIZAÇÃO, ISOLAMENTO E CONTROLE DE ACESSO (RBAC / MULTI-TENANT)", () => {
-  beforeAll(() => {
-    const rootEnvPath = path.resolve(process.cwd(), "../../.env");
-    if (fs.existsSync(rootEnvPath)) {
-      const envContent = fs.readFileSync(rootEnvPath, "utf-8");
-      for (const line of envContent.split("\n")) {
-        const idx = line.indexOf("=");
-        if (idx > 0) {
-          const k = line.substring(0, idx).trim();
-          const v = line.substring(idx + 1).trim().replace(/^['"]|['"]$/g, "");
-          if(k!=="NODE_ENV")process.env[k] = v;
-        }
-      }
-    }
-  });
   // -------------------------------------------------------------------------
   // 1. REJEIÇÃO DE REQUISIÇÕES NÃO AUTENTICADAS (FAIL-CLOSED)
   // -------------------------------------------------------------------------
